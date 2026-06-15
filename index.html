@@ -500,22 +500,25 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
 
 <!-- DONE MODAL -->
 <div class="modal-overlay" id="doneModal">
-  <div class="modal" style="max-width:360px">
-    <div class="modal-title">✅ Mark as Done</div>
-    <div class="modal-sub" id="doneModalSub" style="font-size:13px;color:var(--text-2);margin-bottom:14px;"></div>
-    <div id="doneTimeEntry" style="display:none;margin-bottom:14px">
-      <div style="font-size:10px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:var(--text-3);margin-bottom:8px">How long did it take?</div>
-      <div style="display:flex;gap:8px;align-items:center">
-        <input type="number" id="done-h" placeholder="0" min="0" max="9" style="width:60px;padding:9px;border:1px solid var(--border2);border-radius:8px;font-size:17px;font-family:'DM Mono',monospace;text-align:center;color:var(--text)">
-        <span style="font-size:12px;color:var(--text-3)">hr</span>
-        <input type="number" id="done-m" placeholder="30" min="0" max="59" style="width:60px;padding:9px;border:1px solid var(--border2);border-radius:8px;font-size:17px;font-family:'DM Mono',monospace;text-align:center;color:var(--text)">
-        <span style="font-size:12px;color:var(--text-3)">min</span>
+  <div class="modal" style="max-width:340px">
+    <div class="modal-title">✅ Task Complete</div>
+    <div id="doneTimeSummary" style="text-align:center;margin-bottom:16px">
+      <div style="font-size:42px;font-weight:700;font-family:'DM Mono',monospace;color:var(--accent)" id="doneTimeDisplay">—</div>
+      <div style="font-size:13px;color:var(--text-3);margin-top:4px">total time</div>
+    </div>
+    <div id="doneTimeEntry" style="display:none;margin-bottom:16px">
+      <div style="font-size:11px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;color:var(--text-3);margin-bottom:8px;text-align:center">How long did it take?</div>
+      <div style="display:flex;align-items:center;gap:8px;justify-content:center">
+        <input type="number" id="done-h" placeholder="0" min="0" max="9" style="width:64px;padding:10px;border:1px solid var(--border2);border-radius:8px;font-size:20px;font-family:'DM Mono',monospace;text-align:center;color:var(--text)">
+        <span style="font-size:14px;color:var(--text-3)">hr</span>
+        <input type="number" id="done-m" placeholder="30" min="0" max="59" style="width:64px;padding:10px;border:1px solid var(--border2);border-radius:8px;font-size:20px;font-family:'DM Mono',monospace;text-align:center;color:var(--text)">
+        <span style="font-size:14px;color:var(--text-3)">min</span>
       </div>
     </div>
-    <div class="modal-note">You can fill in marking details after you've marked Henry's work.</div>
+    <div class="modal-note" style="margin-bottom:16px">Marking details can be filled in later after reviewing Henry's work.</div>
     <div class="modal-actions">
       <button class="mbtn-cancel"  onclick="closeModal('doneModal')">Cancel</button>
-      <button class="mbtn-confirm" onclick="confirmDone()">Mark as Done</button>
+      <button class="mbtn-confirm" onclick="confirmDone()">✓ Confirm</button>
     </div>
   </div>
 </div>
@@ -1174,7 +1177,7 @@ function btnRow(id,state){
   if(state==='idle')    return `<button class="tbtn tbtn-start"    onclick="tStart('${id}')">▶ Start</button>`;
   if(state==='running') return `<button class="tbtn tbtn-pause"    onclick="tPause('${id}')">⏸ Pause</button><button class="tbtn tbtn-finish" onclick="tFinish('${id}')">⏹ Finish</button>`;
   if(state==='paused')  return `<button class="tbtn tbtn-continue" onclick="tContinue('${id}')">▶ Continue</button>`;
-  if(state==='stopped') return `<button class="tbtn tbtn-continue" onclick="tStart('${id}')">▶ Continue</button><button class="tbtn tbtn-done" onclick="openDoneModal('${id}')">✅ Done</button>`;
+  if(state==='stopped') return `<button class="tbtn tbtn-continue" onclick="tStart('${id}')">▶ Continue</button>`;
   return '';
 }
 function stLbl(s){ return {idle:'Ready to start',running:'Recording time…',paused:'Paused',stopped:'Session finished'}[s]||s; }
@@ -1304,12 +1307,16 @@ function openDoneModal(id){
   pendingDoneId=id;
   const t=ts(id);
   const te=document.getElementById('doneTimeEntry');
+  const td=document.getElementById('doneTimeDisplay');
   if(t.elapsed>0){
-    document.getElementById('doneModalSub').textContent=`Time recorded: ${durFmt(t.elapsed)}`;
+    if(td) td.textContent=durFmt(t.elapsed)||'—';
     te.style.display='none';
+    document.getElementById('doneTimeSummary').style.display='block';
   } else {
-    document.getElementById('doneModalSub').textContent='No timer recorded. How long did it take?';
-    document.getElementById('done-h').value=''; document.getElementById('done-m').value='';
+    if(td) td.textContent='—';
+    document.getElementById('doneTimeSummary').style.display='none';
+    document.getElementById('done-h').value='';
+    document.getElementById('done-m').value='';
     te.style.display='block';
   }
   openModal('doneModal');
@@ -1318,7 +1325,9 @@ function quickDone(id){
   const h=parseInt(document.getElementById('qh-'+id)?.value)||0;
   const m=parseInt(document.getElementById('qm-'+id)?.value)||0;
   ts(id).elapsed=(h*60+m)*60; pendingDoneId=id;
-  document.getElementById('doneModalSub').textContent=`Time logged: ${durFmt(ts(id).elapsed)||'—'}`;
+  const td=document.getElementById('doneTimeDisplay');
+  if(td) td.textContent=durFmt(ts(id).elapsed)||'—';
+  document.getElementById('doneTimeSummary').style.display='block';
   document.getElementById('doneTimeEntry').style.display='none';
   openModal('doneModal');
 }
@@ -1343,15 +1352,48 @@ function confirmDone(){
 function tickTask(id,e){
   e.stopPropagation();
   const task=TASKS.find(t=>t.id===id); if(!task) return;
-  if(task.status==='done'){ undoTask(id); return; }
+  if(task.status==='done'){
+    playTickSound(false);
+    undoTask(id);
+    return;
+  }
   const tst=ts(id);
   if(tst.state==='running'||tst.state==='paused'){ alert('Please finish the timer session first.'); return; }
+  playTickSound(true);
   openDoneModal(id);
+}
+
+function playTickSound(done){
+  try {
+    const ctx=new(window.AudioContext||window.webkitAudioContext)();
+    if(done){
+      // cheerful completion sound: C-E-G arpeggio
+      [[523,0,0.15],[659,0.1,0.15],[784,0.2,0.25]].forEach(([freq,start,dur])=>{
+        const o=ctx.createOscillator(), g=ctx.createGain();
+        o.connect(g); g.connect(ctx.destination);
+        o.frequency.value=freq; o.type='sine';
+        g.gain.setValueAtTime(0.3, ctx.currentTime+start);
+        g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime+start+dur);
+        o.start(ctx.currentTime+start); o.stop(ctx.currentTime+start+dur);
+      });
+    } else {
+      // soft untick sound: single low tone
+      const o=ctx.createOscillator(), g=ctx.createGain();
+      o.connect(g); g.connect(ctx.destination);
+      o.frequency.value=392; o.type='sine';
+      g.gain.setValueAtTime(0.2, ctx.currentTime);
+      g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime+0.2);
+      o.start(ctx.currentTime); o.stop(ctx.currentTime+0.2);
+    }
+  } catch(e){}
 }
 function tickClass(id,e){
   e.stopPropagation();
   const task=TASKS.find(t=>t.id===id); if(!task) return;
-  task.status=task.status==='done'?'pending':'done'; renderContent();
+  const done = task.status!=='done';
+  playTickSound(done);
+  task.status=done?'done':'pending';
+  renderContent();
 }
 function undoTask(id){
   const task=TASKS.find(t=>t.id===id); if(!task) return;
