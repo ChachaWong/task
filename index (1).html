@@ -1,0 +1,1711 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Henry's Homework</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --bg:#F7F6F3;--surface:#FFF;--border:#E8E4DC;--border2:#D4CFC4;
+  --text:#1A1814;--text-2:#6B6560;--text-3:#A8A29C;
+  --accent:#3D5AFE;--accent-bg:#EEF1FF;
+  --green:#16A34A;--green-bg:#DCFCE7;
+  --amber:#D97706;--amber-bg:#FEF3C7;
+  --red:#DC2626;--red-bg:#FEE2E2;
+  --orange:#EA580C;--orange-bg:#FFF7ED;
+  --radius:12px;--radius-sm:8px;
+}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;}
+
+/* TOP BAR */
+.topbar{background:var(--surface);border-bottom:1px solid var(--border);padding:0 24px;height:56px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:50;}
+.topbar-left{display:flex;align-items:center;gap:10px;}
+.logo{width:30px;height:30px;background:var(--text);border-radius:7px;display:flex;align-items:center;justify-content:center;color:white;font-size:15px;}
+.topbar-title{font-size:15px;font-weight:700;}
+.topbar-date{font-size:11px;color:var(--text-3);font-family:'DM Mono',monospace;}
+.topbar-right{display:flex;align-items:center;gap:6px;}
+.top-divider{width:1px;height:20px;background:var(--border);}
+.add-btn{padding:7px 13px;border:none;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all 0.15s;display:flex;align-items:center;gap:4px;}
+.add-btn.task{background:var(--accent);color:white;}
+.add-btn.task:hover{background:#2949f5;}
+.add-btn.cls{background:var(--orange-bg);color:var(--orange);border:1px solid #FED7AA;}
+.add-btn.cls:hover{background:#FED7AA;}
+.add-btn.recur{background:var(--bg);color:var(--text-2);border:1px solid var(--border2);}
+.add-btn.recur:hover{background:var(--border);}
+.add-btn.hist{background:var(--amber-bg);color:var(--amber);border:1px solid #FDE68A;}
+.add-btn.hist:hover{background:#FDE68A;}
+
+/* MAIN */
+.main{max-width:860px;margin:0 auto;padding:22px 20px;}
+
+/* STAT CARDS */
+.stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:22px;}
+.stat-card{background:var(--surface);border:2px solid var(--border);border-radius:var(--radius);padding:14px 16px;cursor:pointer;transition:all 0.15s;user-select:none;}
+.stat-card:hover{border-color:var(--border2);transform:translateY(-1px);box-shadow:0 2px 8px rgba(0,0,0,0.06);}
+.stat-card.active{border-color:var(--accent);background:var(--accent-bg);}
+.stat-card.active-red{border-color:var(--red);background:var(--red-bg);}
+.stat-card.active-green{border-color:var(--green);background:var(--green-bg);}
+.stat-card.active-amber{border-color:var(--amber);background:var(--amber-bg);}
+.stat-label{font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;color:var(--text-3);margin-bottom:5px;}
+.stat-value{font-size:24px;font-weight:700;font-family:'DM Mono',monospace;line-height:1;}
+.stat-sub{font-size:11px;color:var(--text-3);margin-top:3px;}
+.sv-blue{color:var(--accent);}.sv-green{color:var(--green);}.sv-amber{color:var(--amber);}.sv-red{color:var(--red);}
+
+/* SECTION */
+.section{margin-bottom:20px;}
+.section-header{display:flex;align-items:center;margin-bottom:10px;gap:8px;}
+.section-title{font-size:11px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-3);}
+.section-badge{font-size:10px;font-weight:700;padding:2px 7px;border-radius:20px;font-family:'DM Mono',monospace;background:var(--border);color:var(--text-2);}
+.badge-red{background:var(--red-bg);color:var(--red);}
+.badge-amber{background:var(--amber-bg);color:var(--amber);}
+.badge-green{background:var(--green-bg);color:var(--green);}
+
+/* TASK CARD */
+.task-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);margin-bottom:8px;overflow:hidden;transition:border-color 0.15s;}
+.task-card:hover{border-color:var(--border2);}
+.task-card.overdue{border-left:3px solid var(--red);}
+.task-card.done{border-left:3px solid var(--green);opacity:0.82;}
+.task-card.class-card{border-left:3px solid var(--orange);}
+.task-card.class-card.done{border-left:3px solid var(--green);}
+.task-card.active{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-bg);opacity:1;}
+
+.task-main{display:flex;align-items:center;padding:12px 16px;gap:11px;cursor:pointer;}
+.task-check{width:20px;height:20px;border:2px solid var(--border2);border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all 0.15s;font-size:11px;}
+.task-check:hover{border-color:var(--green);background:var(--green-bg);}
+.task-check.checked{border-color:var(--green);background:var(--green);color:white;}
+
+.task-info{flex:1;min-width:0;}
+.task-name{font-size:14px;font-weight:600;margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.task-card.done .task-name{text-decoration:line-through;color:var(--text-3);}
+.task-meta-row{display:flex;align-items:center;gap:6px;flex-wrap:wrap;}
+.subject-pill{font-size:10px;font-weight:600;padding:2px 7px;border-radius:4px;}
+.pill-Math    {background:#EEF1FF;color:#3D5AFE;}
+.pill-Reading {background:#F0FDF4;color:#15803D;}
+.pill-Writing {background:#FDF4FF;color:#9333EA;}
+.pill-TS      {background:#FFF7ED;color:#EA580C;}
+.pill-Other   {background:var(--bg);color:var(--text-2);}
+.pill-Chinese {background:#FEF2F2;color:#DC2626;}
+.pill-Piano   {background:#EFF6FF;color:#2563EB;}
+.pill-Swimming{background:#ECFEFF;color:#0891B2;}
+.task-date{font-size:11px;color:var(--text-3);font-family:'DM Mono',monospace;}
+.overdue-tag{font-size:10px;font-weight:600;color:var(--red);background:var(--red-bg);padding:2px 6px;border-radius:4px;}
+.marking-tag{font-size:10px;font-weight:600;color:var(--amber);background:var(--amber-bg);padding:2px 6px;border-radius:4px;}
+.est-tag{font-size:11px;color:var(--text-3);font-family:'DM Mono',monospace;}
+.pts-tag{font-size:10px;font-weight:600;color:var(--accent);background:var(--accent-bg);padding:2px 6px;border-radius:4px;}
+.class-time-tag{font-size:11px;font-weight:600;color:var(--orange);font-family:'DM Mono',monospace;}
+.class-loc-tag{font-size:11px;color:var(--text-3);}
+
+.task-right{display:flex;align-items:center;gap:7px;flex-shrink:0;}
+.task-duration{font-size:12px;font-family:'DM Mono',monospace;color:var(--text-2);background:var(--bg);padding:2px 6px;border-radius:4px;}
+.acc-badge{font-size:11px;font-weight:600;padding:2px 7px;border-radius:4px;font-family:'DM Mono',monospace;}
+.acc-good{background:var(--green-bg);color:var(--green);}
+.acc-ok{background:var(--amber-bg);color:var(--amber);}
+.acc-bad{background:var(--red-bg);color:var(--red);}
+.review-tag{font-size:10px;font-weight:600;padding:2px 6px;border-radius:4px;}
+.rt-needed{background:var(--amber-bg);color:var(--amber);}
+.rt-done{background:var(--green-bg);color:var(--green);}
+.action-btn{padding:6px 12px;border-radius:6px;font-size:12px;font-weight:600;border:1px solid var(--border2);background:var(--bg);color:var(--text-2);cursor:pointer;font-family:'DM Sans',sans-serif;transition:all 0.15s;white-space:nowrap;}
+.action-btn:hover{background:var(--border);color:var(--text);}
+.action-btn.primary{background:var(--accent);color:white;border-color:var(--accent);}
+.action-btn.primary:hover{background:#2949f5;}
+.chevron{color:var(--text-3);font-size:11px;transition:transform 0.2s;}
+.chevron.open{transform:rotate(180deg);}
+
+/* EXPANDED */
+.task-expanded{display:none;border-top:1px solid var(--border);}
+.task-expanded.open{display:block;}
+
+/* TIMER PANEL */
+.timer-panel{padding:16px 18px;background:#FAFAF8;display:flex;align-items:center;gap:20px;flex-wrap:wrap;}
+.clock-wrap{position:relative;width:84px;height:84px;flex-shrink:0;}
+.clock-wrap svg{transform:rotate(-90deg);width:84px;height:84px;}
+.c-track{fill:none;stroke:var(--border);stroke-width:6;}
+.c-prog{fill:none;stroke:var(--accent);stroke-width:6;stroke-linecap:round;stroke-dasharray:214;stroke-dashoffset:214;transition:stroke-dashoffset 1s linear,stroke 0.3s;}
+.c-prog.paused{stroke:var(--amber);}
+.c-prog.stopped{stroke:var(--text-3);}
+.clock-center{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;}
+.clock-time{font-family:'DM Mono',monospace;font-size:15px;font-weight:500;line-height:1;}
+.clock-lbl{font-size:9px;color:var(--text-3);letter-spacing:0.06em;text-transform:uppercase;margin-top:2px;}
+.timer-controls{flex:1;min-width:160px;}
+.timer-status{font-size:12px;font-weight:500;color:var(--text-2);margin-bottom:7px;display:flex;align-items:center;gap:5px;}
+.est-compare{font-size:11px;color:var(--text-3);margin-bottom:8px;font-family:'DM Mono',monospace;}
+.est-compare span{color:var(--accent);font-weight:600;}
+.sdot{width:7px;height:7px;border-radius:50%;background:var(--text-3);flex-shrink:0;}
+.sdot.running{background:var(--accent);animation:pulse 1.5s infinite;}
+.sdot.paused{background:var(--amber);}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.3}}
+.btn-row{display:flex;gap:7px;flex-wrap:wrap;}
+.tbtn{padding:7px 13px;border-radius:var(--radius-sm);font-size:12px;font-weight:600;border:none;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all 0.15s;display:flex;align-items:center;gap:4px;}
+.tbtn:active{transform:scale(0.97);}
+.tbtn-start{background:var(--accent);color:white;}
+.tbtn-start:hover{background:#2949f5;}
+.tbtn-pause{background:var(--amber-bg);color:var(--amber);border:1px solid #FDE68A;}
+.tbtn-pause:hover{background:#FDE68A;}
+.tbtn-continue{background:var(--accent-bg);color:var(--accent);border:1px solid #C7D2FE;}
+.tbtn-continue:hover{background:#C7D2FE;}
+.tbtn-finish{background:var(--bg);color:var(--text-2);border:1px solid var(--border2);}
+.tbtn-finish:hover{background:var(--border);}
+.tbtn-done{background:var(--green-bg);color:var(--green);border:1px solid #86EFAC;}
+.tbtn-done:hover{background:#86EFAC;}
+.qdivider{width:1px;height:52px;background:var(--border);flex-shrink:0;}
+.quick-area{min-width:160px;}
+.quick-lbl{font-size:11px;color:var(--text-3);font-weight:500;margin-bottom:6px;}
+.quick-inputs{display:flex;align-items:center;gap:5px;}
+.qinput{width:46px;padding:6px;border:1px solid var(--border2);border-radius:6px;font-size:13px;font-family:'DM Mono',monospace;color:var(--text);background:white;text-align:center;}
+.qinput:focus{outline:none;border-color:var(--accent);}
+.qunit{font-size:11px;color:var(--text-3);}
+.tbtn-quick{padding:6px 10px;background:var(--green-bg);color:var(--green);border:1px solid #86EFAC;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;}
+.tbtn-quick:hover{background:#86EFAC;}
+
+/* SESSION LOG */
+.sess-log{padding:9px 18px;border-top:1px solid var(--border);display:none;}
+.sess-log.visible{display:block;}
+.sess-log-title{font-size:10px;font-weight:600;letter-spacing:0.07em;text-transform:uppercase;color:var(--text-3);margin-bottom:5px;}
+.sess-row{display:flex;justify-content:space-between;font-size:11px;font-family:'DM Mono',monospace;color:var(--text-2);padding:3px 0;border-bottom:1px solid var(--border);}
+.sess-row:last-child{border-bottom:none;}
+
+/* MARKING PANEL */
+.marking-panel{border-top:1px solid var(--border);padding:14px 18px;background:#FAFFF8;}
+.panel-title{font-size:10px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:var(--text-3);margin-bottom:10px;display:flex;align-items:center;justify-content:space-between;}
+.marking-fields{display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;}
+.mf{display:flex;flex-direction:column;gap:4px;}
+.mf label{font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;color:var(--text-3);}
+.mf input{width:68px;padding:7px 8px;border:1px solid var(--border2);border-radius:6px;font-size:14px;font-family:'DM Mono',monospace;color:var(--text);background:white;text-align:center;}
+.mf input:focus{outline:none;border-color:var(--green);}
+.mf input:disabled{background:var(--bg);color:var(--text-3);}
+.acc-live{font-size:20px;font-weight:700;font-family:'DM Mono',monospace;padding-bottom:2px;}
+.review-choice{display:flex;flex-direction:column;gap:4px;}
+.review-choice label{font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;color:var(--text-3);}
+.review-btns{display:flex;gap:5px;}
+.rbtn{padding:6px 11px;border-radius:6px;border:1px solid var(--border2);background:var(--bg);color:var(--text-2);font-size:12px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all 0.15s;}
+.rbtn.sel-yes{background:var(--amber-bg);color:var(--amber);border-color:#FDE68A;}
+.rbtn.sel-no{background:var(--green-bg);color:var(--green);border-color:#86EFAC;}
+.rbtn:disabled{opacity:0.5;cursor:default;}
+.tbtn-save-marking{padding:7px 13px;background:var(--text);color:white;border:none;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;align-self:flex-end;}
+.tbtn-save-marking:hover{background:#333;}
+.tbtn-edit{padding:6px 11px;background:var(--bg);color:var(--text-3);border:1px solid var(--border);border-radius:6px;font-size:11px;cursor:pointer;font-family:'DM Sans',sans-serif;align-self:flex-end;}
+
+/* REVIEW SUB */
+.review-sub{border-top:1px solid var(--border);padding:14px 18px;background:#FFFBF0;}
+.review-sub-title{font-size:11px;font-weight:600;color:var(--amber);display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;}
+.review-done-badge{font-size:11px;font-weight:600;color:var(--green);background:var(--green-bg);padding:2px 8px;border-radius:20px;}
+.tbtn-mark-rv{padding:7px 12px;background:var(--amber);color:white;border:none;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;align-self:flex-end;}
+.tbtn-mark-rv:hover{background:#B45309;}
+.tbtn-undo-rv{padding:6px 10px;background:var(--bg);color:var(--text-3);border:1px solid var(--border);border-radius:6px;font-size:11px;cursor:pointer;font-family:'DM Sans',sans-serif;align-self:flex-end;}
+
+/* MODAL */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(26,24,20,0.45);backdrop-filter:blur(3px);z-index:200;align-items:center;justify-content:center;padding:20px;}
+.modal-overlay.open{display:flex;}
+.modal{background:white;border-radius:16px;padding:26px;width:100%;max-width:440px;box-shadow:0 20px 60px rgba(0,0,0,0.12);animation:mIn 0.18s ease;max-height:90vh;overflow-y:auto;}
+@keyframes mIn{from{transform:translateY(14px) scale(0.98);opacity:0}to{transform:none;opacity:1}}
+.modal-title{font-size:17px;font-weight:700;margin-bottom:16px;}
+.field{margin-bottom:14px;}
+.field label{display:block;font-size:10px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:var(--text-3);margin-bottom:5px;}
+.field input,.field textarea,.field select{width:100%;padding:9px 11px;border:1px solid var(--border2);border-radius:8px;font-size:14px;font-family:'DM Sans',sans-serif;color:var(--text);background:white;}
+.field input:focus,.field textarea:focus,.field select:focus{outline:none;border-color:var(--accent);}
+.field textarea{height:60px;resize:vertical;}
+.field-row{display:flex;gap:10px;}
+.field-row .field{flex:1;}
+.picker{display:flex;gap:6px;flex-wrap:wrap;}
+.pick-btn{padding:7px 12px;border:1px solid var(--border2);border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text-2);transition:all 0.15s;}
+.pick-btn:hover{background:var(--border);}
+.pick-btn.sel{background:var(--accent);color:white;border-color:var(--accent);}
+.day-picker{display:flex;gap:5px;}
+.day-btn{width:36px;height:36px;border:1px solid var(--border2);border-radius:50%;font-size:11px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text-2);display:flex;align-items:center;justify-content:center;transition:all 0.15s;}
+.day-btn:hover{background:var(--border);}
+.day-btn.sel{background:var(--accent);color:white;border-color:var(--accent);}
+.modal-note{font-size:12px;color:var(--text-3);background:var(--bg);padding:10px 12px;border-radius:8px;margin-bottom:16px;line-height:1.5;}
+.modal-actions{display:flex;gap:8px;margin-top:6px;}
+.mbtn-cancel{flex:1;padding:11px;background:var(--bg);border:1px solid var(--border2);color:var(--text-2);border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;cursor:pointer;}
+.mbtn-save{flex:2;padding:11px;background:var(--accent);border:none;color:white;border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:700;cursor:pointer;}
+.mbtn-save:hover{background:#2949f5;}
+.mbtn-confirm{flex:2;padding:11px;background:var(--text);border:none;color:white;border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:700;cursor:pointer;}
+.mbtn-confirm:hover{background:#333;}
+
+/* RECURRING MANAGE */
+.recurring-list{display:flex;flex-direction:column;gap:8px;max-height:60vh;overflow-y:auto;}
+.recurring-item{background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:14px 16px;}
+.ri-name{font-size:14px;font-weight:600;margin-bottom:4px;}
+.ri-meta{font-size:11px;color:var(--text-3);display:flex;gap:8px;flex-wrap:wrap;}
+.ri-actions{display:flex;gap:6px;margin-top:8px;}
+.ri-btn{padding:5px 10px;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;border:1px solid var(--border2);background:white;color:var(--text-2);}
+.ri-btn:hover{background:var(--border);}
+.ri-btn.danger{color:var(--red);border-color:#FECACA;}
+.ri-btn.danger:hover{background:var(--red-bg);}
+.ri-status{font-size:10px;font-weight:600;padding:2px 7px;border-radius:20px;}
+.ri-active{background:var(--green-bg);color:var(--green);}
+.ri-paused{background:var(--amber-bg);color:var(--amber);}
+
+/* REVIEW HISTORY PAGE */
+.review-filter-row{display:flex;gap:6px;margin-left:auto;}
+.rv-filter-btn{padding:4px 12px;border:1px solid var(--border2);border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text-2);transition:all 0.15s;}
+.rv-filter-btn:hover{background:var(--border);}
+.rv-filter-btn.sel{background:var(--amber);color:white;border-color:var(--amber);}
+.rv-group-title{font-size:11px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;color:var(--text-3);margin:14px 0 8px;}
+
+.empty{text-align:center;padding:32px 20px;color:var(--text-3);font-size:13px;}
+.section-empty{padding:16px;text-align:center;color:var(--text-3);font-size:12px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);}
+
+/* ── TABLET (768–1024px) ── */
+@media(max-width:1024px){
+  .topbar{padding:0 16px;}
+  .main{padding:18px 16px;}
+  .add-btn{padding:7px 10px;font-size:11px;}
+}
+
+/* ── MOBILE (≤600px) ── */
+@media(max-width:600px){
+  .topbar{padding:0 12px;height:auto;flex-wrap:wrap;gap:8px;padding-top:10px;padding-bottom:10px;}
+  .topbar-left{width:100%;}
+  .topbar-right{width:100%;flex-wrap:wrap;gap:6px;}
+  .top-divider{display:none;}
+  .topbar-date{display:none;}
+  .add-btn{flex:1;min-width:0;justify-content:center;font-size:11px;padding:8px 6px;}
+  .add-btn span{display:inline;}
+
+  .main{padding:12px 10px;}
+  .stats-row{grid-template-columns:repeat(2,1fr);gap:8px;}
+  .stat-value{font-size:20px;}
+
+  /* task cards */
+  .task-main{padding:10px 12px;gap:8px;}
+  .task-name{font-size:13px;}
+  .task-right{gap:5px;flex-wrap:wrap;justify-content:flex-end;}
+  .acc-badge{font-size:10px;padding:2px 5px;}
+  .review-tag{font-size:9px;padding:2px 5px;}
+  .action-btn{padding:5px 10px;font-size:11px;}
+  .est-tag{display:none;}  /* hide est on mobile to save space */
+
+  /* timer panel - stack vertically */
+  .timer-panel{flex-direction:column;align-items:flex-start;gap:14px;padding:14px 12px;}
+  .qdivider{display:none;}
+  .quick-area{width:100%;}
+  .quick-inputs{flex-wrap:wrap;}
+  .tbtn{padding:10px 14px;font-size:13px;}  /* bigger touch targets */
+
+  /* modals - full screen on mobile */
+  .modal-overlay{padding:0;align-items:flex-end;}
+  .modal{border-radius:16px 16px 0 0;max-width:100%;max-height:92vh;padding:20px 16px;}
+
+  /* marking panel */
+  .marking-fields{gap:8px;}
+  .mf input{width:60px;}
+
+  /* session log */
+  .sess-log{padding:8px 12px;}
+}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-left">
+    <div class="logo">📚</div>
+    <span class="topbar-title">Henry's Homework</span>
+    <span class="topbar-date" id="topDate"></span>
+  </div>
+  <div class="topbar-right">
+    <button class="add-btn task"  onclick="openModal('addTaskModal')">＋ <span>Add Task</span></button>
+    <button class="add-btn cls"   onclick="openModal('addClassModal')">＋ <span>Add Class</span></button>
+    <div class="top-divider"></div>
+    <button class="add-btn recur" onclick="openRecurringModal()">⚙ <span>Recurring</span></button>
+    <button class="add-btn hist"  onclick="openReviewHistory()">📋 <span>Review History</span></button>
+    <button class="add-btn hist"  onclick="openStats()" style="background:var(--accent-bg);color:var(--accent);border-color:#C7D2FE">📊 <span>Stats</span></button>
+    <button class="add-btn hist"  onclick="openPoints()" style="background:#FDF4FF;color:#9333EA;border-color:#DDD6FE">⭐ <span>Points</span></button>
+    <button class="add-btn hist"  onclick="openErrorBook()" style="background:var(--red-bg);color:var(--red);border-color:#FECACA">📖 <span>Error Book</span></button>
+  </div>
+</div>
+
+<div class="main">
+  <!-- STAT CARDS -->
+  <div class="stats-row">
+    <div class="stat-card" id="sc-today"   onclick="setView('today')">
+      <div class="stat-label">Today</div>
+      <div class="stat-value sv-blue" id="sTd">0</div>
+      <div class="stat-sub">tasks &amp; classes</div>
+    </div>
+    <div class="stat-card" id="sc-overdue"  onclick="setView('overdue')">
+      <div class="stat-label">Overdue</div>
+      <div class="stat-value sv-red" id="sOv">0</div>
+      <div class="stat-sub">need attention</div>
+    </div>
+    <div class="stat-card" id="sc-done"     onclick="setView('done')">
+      <div class="stat-label">Done Today</div>
+      <div class="stat-value sv-green" id="sDn">0</div>
+      <div class="stat-sub">completed</div>
+    </div>
+    <div class="stat-card" id="sc-review"   onclick="setView('review')">
+      <div class="stat-label">Review Pending</div>
+      <div class="stat-value sv-amber" id="sRv">0</div>
+      <div class="stat-sub">to review</div>
+    </div>
+  </div>
+
+  <!-- CONTENT AREA -->
+  <div id="contentArea"></div>
+</div>
+
+<!-- ADD TASK MODAL -->
+<div class="modal-overlay" id="addTaskModal">
+  <div class="modal">
+    <div class="modal-title">📝 Add Task</div>
+    <div class="field"><label>Date</label><input type="date" id="at-date"></div>
+    <div class="field">
+      <label>Subject</label>
+      <div class="picker" id="at-subject-picker">
+        <div class="pick-btn" onclick="pickSubject('Math',this)">Math</div>
+        <div class="pick-btn" onclick="pickSubject('Reading',this)">Reading</div>
+        <div class="pick-btn" onclick="pickSubject('Writing',this)">Writing</div>
+        <div class="pick-btn" onclick="pickSubject('TS',this)">TS</div>
+        <div class="pick-btn" onclick="pickSubject('Other',this)">Other</div>
+      </div>
+    </div>
+    <div class="field"><label>Task Details</label><textarea id="at-details" placeholder="e.g. Worksheet Ch.5, Reading p.44–46…"></textarea></div>
+    <div class="field">
+      <label>Henry's Estimated Time</label>
+      <div class="picker" id="at-est-picker">
+        <div class="pick-btn" onclick="pickEst(15,this,'at')">15m</div>
+        <div class="pick-btn" onclick="pickEst(30,this,'at')">30m</div>
+        <div class="pick-btn" onclick="pickEst(45,this,'at')">45m</div>
+        <div class="pick-btn" onclick="pickEst(60,this,'at')">1h</div>
+        <div class="pick-btn" onclick="pickEst('custom',this,'at')">Custom</div>
+      </div>
+      <div id="at-est-custom" style="display:none;margin-top:8px;gap:6px;align-items:center">
+        <input type="number" id="at-est-h" placeholder="0" min="0" max="5" style="width:56px;padding:8px;border:1px solid var(--border2);border-radius:6px;font-size:14px;font-family:'DM Mono',monospace;text-align:center;">
+        <span style="font-size:12px;color:var(--text-3)">hr</span>
+        <input type="number" id="at-est-m" placeholder="30" min="0" max="59" style="width:56px;padding:8px;border:1px solid var(--border2);border-radius:6px;font-size:14px;font-family:'DM Mono',monospace;text-align:center;">
+        <span style="font-size:12px;color:var(--text-3)">min</span>
+      </div>
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label>Base Points</label>
+        <input type="number" id="at-points" placeholder="10" min="0" style="font-family:'DM Mono',monospace;">
+      </div>
+      <div class="field" style="flex:2">
+        <label>Recurring</label>
+        <div class="picker" id="at-recur-picker">
+          <div class="pick-btn sel" onclick="pickRecur('none',this,'at')">None</div>
+          <div class="pick-btn" onclick="pickRecur('daily',this,'at')">Daily</div>
+          <div class="pick-btn" onclick="pickRecur('weekly',this,'at')">Weekly</div>
+          <div class="pick-btn" onclick="pickRecur('monthly',this,'at')">Monthly</div>
+        </div>
+      </div>
+    </div>
+    <div id="at-recur-options" style="display:none">
+      <div id="at-day-field" class="field" style="display:none">
+        <label>Day of Week</label>
+        <div class="day-picker" id="at-day-picker">
+          <div class="day-btn" onclick="this.classList.toggle('sel')">Mo</div>
+          <div class="day-btn" onclick="this.classList.toggle('sel')">Tu</div>
+          <div class="day-btn" onclick="this.classList.toggle('sel')">We</div>
+          <div class="day-btn" onclick="this.classList.toggle('sel')">Th</div>
+          <div class="day-btn" onclick="this.classList.toggle('sel')">Fr</div>
+          <div class="day-btn" onclick="this.classList.toggle('sel')">Sa</div>
+          <div class="day-btn" onclick="this.classList.toggle('sel')">Su</div>
+        </div>
+      </div>
+      <div id="at-monthday-field" class="field" style="display:none">
+        <label>Day of Month</label>
+        <input type="number" id="at-monthday" placeholder="e.g. 15" min="1" max="31">
+      </div>
+      <div class="field-row">
+        <div class="field"><label>Start Date</label><input type="date" id="at-start-date"></div>
+        <div class="field"><label>End Date (optional)</label><input type="date" id="at-end-date"></div>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="mbtn-cancel" onclick="closeModal('addTaskModal')">Cancel</button>
+      <button class="mbtn-save"   onclick="addTask()">Add Task</button>
+    </div>
+  </div>
+</div>
+
+<!-- ADD CLASS MODAL -->
+<div class="modal-overlay" id="addClassModal">
+  <div class="modal">
+    <div class="modal-title">🏫 Add After School Class</div>
+    <div class="field">
+      <label>Class Type</label>
+      <div class="picker" id="ac-type-picker">
+        <div class="pick-btn" onclick="pickClassType('Chinese',this)">Chinese</div>
+        <div class="pick-btn" onclick="pickClassType('Piano',this)">Piano</div>
+        <div class="pick-btn" onclick="pickClassType('Swimming',this)">Swimming</div>
+        <div class="pick-btn" onclick="pickClassType('Writing',this)">Writing</div>
+      </div>
+    </div>
+    <div class="field"><label>Class Name <span style="font-weight:400;color:var(--text-3)">(optional)</span></label><input type="text" id="ac-name" placeholder="e.g. Piano Lesson"></div>
+    <div class="field-row">
+      <div class="field"><label>Start Time</label><input type="time" id="ac-start"></div>
+      <div class="field"><label>End Time</label><input type="time" id="ac-end"></div>
+    </div>
+    <div class="field"><label>Location <span style="font-weight:400;color:var(--text-3)">(optional)</span></label><input type="text" id="ac-location" placeholder="e.g. Chatswood"></div>
+    <div class="field-row">
+      <div class="field">
+        <label>Base Points</label>
+        <input type="number" id="ac-points" placeholder="5" min="0" style="font-family:'DM Mono',monospace;">
+      </div>
+      <div class="field" style="flex:2">
+        <label>Recurring</label>
+        <div class="picker" id="ac-recur-picker">
+          <div class="pick-btn sel" onclick="pickRecur('none',this,'ac')">None</div>
+          <div class="pick-btn" onclick="pickRecur('daily',this,'ac')">Daily</div>
+          <div class="pick-btn" onclick="pickRecur('weekly',this,'ac')">Weekly</div>
+          <div class="pick-btn" onclick="pickRecur('monthly',this,'ac')">Monthly</div>
+        </div>
+      </div>
+    </div>
+    <div id="ac-oneoff-date" class="field">
+      <label>Date</label><input type="date" id="ac-date">
+    </div>
+    <div id="ac-recur-options" style="display:none">
+      <div id="ac-day-field" class="field" style="display:none">
+        <label>Day of Week</label>
+        <div class="day-picker" id="ac-day-picker">
+          <div class="day-btn" onclick="this.classList.toggle('sel')">Mo</div>
+          <div class="day-btn" onclick="this.classList.toggle('sel')">Tu</div>
+          <div class="day-btn" onclick="this.classList.toggle('sel')">We</div>
+          <div class="day-btn" onclick="this.classList.toggle('sel')">Th</div>
+          <div class="day-btn" onclick="this.classList.toggle('sel')">Fr</div>
+          <div class="day-btn" onclick="this.classList.toggle('sel')">Sa</div>
+          <div class="day-btn" onclick="this.classList.toggle('sel')">Su</div>
+        </div>
+      </div>
+      <div id="ac-monthday-field" class="field" style="display:none">
+        <label>Day of Month</label>
+        <input type="number" id="ac-monthday" placeholder="e.g. 15" min="1" max="31">
+      </div>
+      <div class="field-row">
+        <div class="field"><label>Start Date</label><input type="date" id="ac-start-date"></div>
+        <div class="field"><label>End Date (optional)</label><input type="date" id="ac-end-date"></div>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="mbtn-cancel" onclick="closeModal('addClassModal')">Cancel</button>
+      <button class="mbtn-save"   onclick="addClass()">Add Class</button>
+    </div>
+  </div>
+</div>
+
+<!-- RECURRING MODAL -->
+<div class="modal-overlay" id="recurringModal">
+  <div class="modal" style="max-width:520px">
+    <div class="modal-title">⚙ Manage Recurring</div>
+    <div class="recurring-list" id="recurringList"></div>
+    <div class="modal-actions" style="margin-top:16px">
+      <button class="mbtn-cancel" onclick="closeModal('recurringModal')">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- DONE MODAL -->
+<div class="modal-overlay" id="doneModal">
+  <div class="modal" style="max-width:360px">
+    <div class="modal-title">✅ Mark as Done</div>
+    <div class="modal-sub" id="doneModalSub" style="font-size:13px;color:var(--text-2);margin-bottom:14px;"></div>
+    <div id="doneTimeEntry" style="display:none;margin-bottom:14px">
+      <div style="font-size:10px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:var(--text-3);margin-bottom:8px">How long did it take?</div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <input type="number" id="done-h" placeholder="0" min="0" max="9" style="width:60px;padding:9px;border:1px solid var(--border2);border-radius:8px;font-size:17px;font-family:'DM Mono',monospace;text-align:center;color:var(--text)">
+        <span style="font-size:12px;color:var(--text-3)">hr</span>
+        <input type="number" id="done-m" placeholder="30" min="0" max="59" style="width:60px;padding:9px;border:1px solid var(--border2);border-radius:8px;font-size:17px;font-family:'DM Mono',monospace;text-align:center;color:var(--text)">
+        <span style="font-size:12px;color:var(--text-3)">min</span>
+      </div>
+    </div>
+    <div class="modal-note">You can fill in marking details after you've marked Henry's work.</div>
+    <div class="modal-actions">
+      <button class="mbtn-cancel"  onclick="closeModal('doneModal')">Cancel</button>
+      <button class="mbtn-confirm" onclick="confirmDone()">Mark as Done</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── CONFIG ──
+const DAYS_SHORT = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+const DAY_MAP = {Mo:'Mon',Tu:'Tue',We:'Wed',Th:'Thu',Fr:'Fri',Sa:'Sat',Su:'Sun'};
+
+// ── DATE UTILS ──
+const today = new Date(); today.setHours(0,0,0,0);
+const fmt    = d => new Date(d).toLocaleDateString('en-AU',{day:'numeric',month:'short'});
+const fmtL   = d => new Date(d).toLocaleDateString('en-AU',{weekday:'long',day:'numeric',month:'long'});
+const fmtISO = d => { const dd=new Date(d); return dd.getFullYear()+'-'+String(dd.getMonth()+1).padStart(2,'0')+'-'+String(dd.getDate()).padStart(2,'0'); };
+function dAgo(n){ const d=new Date(today); d.setDate(d.getDate()-n); return d; }
+function daysAgoLabel(date){
+  const d=new Date(date); d.setHours(0,0,0,0);
+  const diff=Math.floor((today-d)/(1000*60*60*24));
+  if(diff===0) return {text:'Today',cls:'ok'};
+  if(diff===1) return {text:'Yesterday',cls:'warn'};
+  if(diff<=3)  return {text:diff+'d ago',cls:'warn'};
+  return {text:diff+'d ago',cls:'urgent'};
+}
+
+// ── DATA ──
+let RECURRING = [
+  {id:'R001',type:'task',name:'Daily Reading',subject:'Reading',details:'Read for 20 minutes',estSecs:1200,basePoints:5,
+   freq:'daily',days:[],startDate:fmtISO(dAgo(10)),endDate:'',active:true,skipDates:[]},
+  {id:'R002',type:'class',name:'Piano Lesson',subject:'Piano',startTime:'16:00',endTime:'17:30',
+   location:'Chatswood',basePoints:5,freq:'weekly',days:['Tue','Thu'],startDate:fmtISO(dAgo(30)),endDate:'',active:true,skipDates:[]},
+];
+let recurIdCounter = 3;
+
+let TASKS = [
+  {id:'T001',type:'task',name:'Maths Worksheet Ch.5',subject:'Math',date:dAgo(3),status:'overdue',
+   estSecs:1800,basePoints:10,totalSecs:0,marking:null,sessions:[],review:null,recurId:null},
+  {id:'T002',type:'task',name:'English Reading Response',subject:'Reading',date:dAgo(1),status:'done',
+   estSecs:1800,basePoints:10,totalSecs:1240,
+   marking:{totalQ:10,wrongQ:4,needReview:true,saved:true},
+   sessions:[{a:'Start',t:'Mon 15:00'},{a:'Finish',t:'Mon 15:40'},{a:'Done',t:'Mon 15:41'}],
+   review:{done:false,notes:'',reviewedCount:0,totalWrong:4,sessions:[],totalSecs:0},recurId:null},
+  {id:'T003',type:'task',name:'Chinese Writing Practice',subject:'Writing',date:today,status:'pending',
+   estSecs:2700,basePoints:10,totalSecs:0,marking:null,sessions:[],review:null,recurId:null},
+  {id:'T006',type:'task',name:'Spelling List 12',subject:'Reading',date:today,status:'done',
+   estSecs:900,basePoints:5,totalSecs:840,
+   marking:{totalQ:20,wrongQ:0,needReview:false,saved:true},
+   sessions:[{a:'Start',t:'Today 15:00'},{a:'Done',t:'Today 15:14'}],review:null,recurId:null},
+];
+let taskIdCounter = 7;
+
+function generateRecurring(){
+  const todayStr=fmtISO(today), todayDay=DAYS_SHORT[today.getDay()];
+  RECURRING.forEach(r=>{
+    if(!r.active) return;
+    if(r.startDate&&todayStr<r.startDate) return;
+    if(r.endDate&&todayStr>r.endDate) return;
+    if(r.skipDates&&r.skipDates.some(s=>todayStr>=s.from&&todayStr<=s.to)) return;
+    const matches = r.freq==='daily' ||
+      (r.freq==='weekly'&&r.days.includes(todayDay)) ||
+      (r.freq==='monthly'&&r.days.includes(String(today.getDate())));
+    if(!matches) return;
+    if(TASKS.find(t=>t.recurId===r.id&&fmtISO(t.date)===todayStr)) return;
+    const id='T'+String(taskIdCounter++).padStart(3,'0');
+    if(r.type==='class'){
+      TASKS.push({id,type:'class',name:r.name,subject:r.subject,startTime:r.startTime,endTime:r.endTime,
+        location:r.location,date:new Date(today),status:'pending',recurId:r.id,
+        basePoints:r.basePoints||0,sessions:[],marking:null,review:null,totalSecs:0,estSecs:null});
+    } else {
+      TASKS.push({id,type:'task',name:r.name,subject:r.subject,details:r.details,date:new Date(today),
+        status:'pending',estSecs:r.estSecs,basePoints:r.basePoints||0,
+        totalSecs:0,marking:null,sessions:[],review:null,recurId:r.id});
+    }
+  });
+}
+generateRecurring();
+
+// ── TIMER STATE ──
+const TS={}, RVS={};
+function ts(id){ if(!TS[id]) TS[id]={state:'idle',elapsed:0,sessionStart:null,interval:null,sessions:[]}; return TS[id]; }
+function getReviewTS(id){ if(!RVS[id]) RVS[id]={state:'idle',elapsed:0,sessionStart:null,interval:null,sessions:[]}; return RVS[id]; }
+
+// ── VIEW STATE ──
+let currentView = 'all';  // default: show everything
+let expandedId = null, expandedReviewId = null, pendingDoneId = null;
+let atSubject = null, atEstMins = null, atRecur = 'none';
+let acType = null, acRecur = 'none';
+let markingReview = {};
+let reviewFilter = 'all';
+let expandedRecurId = null;
+
+document.getElementById('topDate').textContent = fmtL(today);
+document.getElementById('at-date').value = fmtISO(today);
+document.getElementById('ac-date').value  = fmtISO(today);
+document.getElementById('at-start-date').value = fmtISO(today);
+document.getElementById('ac-start-date').value  = fmtISO(today);
+
+// ── SET VIEW ──
+function setView(view){
+  // clicking the active filter again → cancel, show all
+  currentView = currentView === view ? 'all' : view;
+  const map = {today:'sc-today',overdue:'sc-overdue',done:'sc-done',review:'sc-review'};
+  const activeClass = {today:'active',overdue:'active-red',done:'active-green',review:'active-amber'};
+  Object.keys(map).forEach(k=>{
+    const el=document.getElementById(map[k]);
+    el.className='stat-card'+(k===currentView?' '+activeClass[k]:'');
+  });
+  renderContent();
+}
+
+// ── RENDER ──
+function renderContent(){
+  const overdue    = TASKS.filter(t=>t.status==='overdue');
+  const todayAll   = TASKS.filter(t=>fmtISO(t.date)===fmtISO(today));
+  const todayDone  = TASKS.filter(t=>fmtISO(t.date)===fmtISO(today)&&t.status==='done');
+  const reviewPend = TASKS.filter(t=>t.marking&&t.marking.needReview&&t.review&&!t.review.done);
+
+  // update stats
+  document.getElementById('sTd').textContent = todayAll.length;
+  document.getElementById('sOv').textContent = overdue.length;
+  document.getElementById('sDn').textContent = todayDone.length;
+  document.getElementById('sRv').textContent = reviewPend.length;
+
+  const area = document.getElementById('contentArea');
+
+  if(currentView==='all'){
+    // show everything: overdue + today + review pending
+    let html = '';
+    if(overdue.length)
+      html += sectionHTML('Overdue', overdue.length, 'badge-red', overdue.map(taskHTML).join(''));
+    const todayPend = todayAll.filter(t=>t.status!=='done');
+    const todayDoneList = todayAll.filter(t=>t.status==='done');
+    const todaySorted = [...todayPend, ...todayDoneList];
+    if(todaySorted.length)
+      html += sectionHTML('Today', todayAll.length, '', todaySorted.map(taskHTML).join(''));
+    if(reviewPend.length){
+      const rvSorted=[...reviewPend].sort((a,b)=>(accPct(a.marking.totalQ,a.marking.wrongQ)??100)-(accPct(b.marking.totalQ,b.marking.wrongQ)??100));
+      html += sectionHTML('Review Pending', reviewPend.length, 'badge-amber', rvSorted.map(reviewCardHTML).join(''));
+    }
+    if(!html) html = emptyHTML('Nothing to show today.');
+    area.innerHTML = html;
+  } else if(currentView==='today'){
+    const pending = todayAll.filter(t=>t.status!=='done');
+    const done    = todayAll.filter(t=>t.status==='done');
+    const sorted  = [...pending, ...done];
+    area.innerHTML = sectionHTML('Today', todayAll.length, '', sorted.map(taskHTML).join('')||emptyHTML('No tasks today.'));
+  } else if(currentView==='overdue'){
+    area.innerHTML = sectionHTML('Overdue', overdue.length, 'badge-red', overdue.map(taskHTML).join('')||emptyHTML('No overdue tasks.'));
+  } else if(currentView==='done'){
+    area.innerHTML = sectionHTML('Done Today', todayDone.length, 'badge-green', todayDone.map(taskHTML).join('')||emptyHTML('Nothing completed yet today.'));
+  } else if(currentView==='review'){
+    const sorted = [...reviewPend].sort((a,b)=>(accPct(a.marking.totalQ,a.marking.wrongQ)??100)-(accPct(b.marking.totalQ,b.marking.wrongQ)??100));
+    area.innerHTML = sectionHTML('Review Pending', reviewPend.length, 'badge-amber', sorted.map(reviewCardHTML).join('')||emptyHTML('No pending reviews.'));
+  }
+
+  reattach();
+}
+
+function sectionHTML(title, count, badgeCls, body){
+  return `<div class="section">
+    <div class="section-header">
+      <div class="section-title">${title}</div>
+      <span class="section-badge ${badgeCls}">${count}</span>
+    </div>
+    ${body}
+  </div>`;
+}
+function emptyHTML(msg){ return `<div class="section-empty">${msg}</div>`; }
+
+// ── TASK HTML ──
+function pill(s){
+  const map={Math:'pill-Math',Reading:'pill-Reading',Writing:'pill-Writing',TS:'pill-TS',
+    Other:'pill-Other',Chinese:'pill-Chinese',Piano:'pill-Piano',Swimming:'pill-Swimming'};
+  return `<span class="subject-pill ${map[s]||'pill-Other'}">${s}</span>`;
+}
+function durFmt(s){ if(!s) return ''; const h=Math.floor(s/3600),m=Math.floor((s%3600)/60); return h>0?`${h}h ${m}m`:`${m}m`; }
+function accPct(tq,wq){ if(!tq) return null; return Math.round(((tq-(wq||0))/tq)*100); }
+function accBadge(pct){ if(pct===null) return ''; const c=pct>=90?'acc-good':pct>=70?'acc-ok':'acc-bad'; return `<span class="acc-badge ${c}">${pct}%</span>`; }
+function fmtSecs(s){ const h=Math.floor(s/3600),m=Math.floor((s%3600)/60),sec=s%60; return `${pad(h)}:${pad(m)}:${pad(sec)}`; }
+function fmtTime(t){ if(!t) return ''; const [h,m]=t.split(':'); const hh=parseInt(h); return `${hh>12?hh-12:hh||12}:${m}${hh>=12?'pm':'am'}`; }
+function pad(n){ return String(n).padStart(2,'0'); }
+
+function taskHTML(t){
+  if(t.type==='class') return classCardHTML(t);
+  const exp=expandedId===t.id;
+  const isDone=t.status==='done', isOverdue=t.status==='overdue';
+  const tst=ts(t.id);
+  const pct=t.marking?accPct(t.marking.totalQ,t.marking.wrongQ):null;
+
+  let cardCls='task-card';
+  if(isDone) cardCls+=' done';
+  if(isOverdue) cardCls+=' overdue';
+  if(exp) cardCls+=' active';
+
+  let right='';
+  if(isDone){
+    right+=`<span class="task-duration">${durFmt(t.totalSecs)||'—'}</span>`;
+    if(t.marking&&t.marking.saved) right+=accBadge(pct);
+    else right+=`<span class="marking-tag">Pending marking</span>`;
+    if(t.marking&&t.marking.needReview)
+      right+=`<span class="review-tag ${t.review&&t.review.done?'rt-done':'rt-needed'}">${t.review&&t.review.done?'✓ Reviewed':'📌 Review'}</span>`;
+    if(t.basePoints) right+=`<span class="pts-tag">+${t.basePoints}pts</span>`;
+  } else {
+    const st=tst.state;
+    if(st==='idle')    right+=`<button class="action-btn primary" onclick="expandAndStart('${t.id}',event)">▶ Start</button>`;
+    if(st==='stopped') right+=`<button class="action-btn primary" onclick="expandAndStart('${t.id}',event)">▶ Continue</button>`;
+    if(st==='running') right+=`<span class="review-tag" style="background:var(--accent-bg);color:var(--accent)">● Recording</span>`;
+    if(st==='paused')  right+=`<span class="review-tag rt-needed">⏸ Paused</span>`;
+    if(t.basePoints)   right+=`<span class="pts-tag">${t.basePoints}pts</span>`;
+  }
+  right+=`<span class="chevron ${exp?'open':''}">▾</span>`;
+
+  const meta = `${pill(t.subject)}<span class="task-date">${fmt(t.date)}</span>${isOverdue?'<span class="overdue-tag">Overdue</span>':''}${t.estSecs?`<span class="est-tag">est. ${durFmt(t.estSecs)}</span>`:''}`;
+
+  return `<div class="${cardCls}" id="card-${t.id}">
+    <div class="task-main" onclick="expand('${t.id}',event)">
+      <div class="task-check ${isDone?'checked':''}" onclick="tickTask('${t.id}',event)">${isDone?'✓':''}</div>
+      <div class="task-info">
+        <div class="task-name">${t.name}</div>
+        <div class="task-meta-row">${meta}</div>
+      </div>
+      <div class="task-right">${right}</div>
+    </div>
+    <div class="task-expanded ${exp?'open':''}" id="exp-${t.id}">${exp?expandedHTML(t):''}</div>
+  </div>`;
+}
+
+function classCardHTML(t){
+  const isDone=t.status==='done';
+  const timeStr=t.startTime&&t.endTime?`${fmtTime(t.startTime)}–${fmtTime(t.endTime)}`:'';
+  return `<div class="task-card class-card ${isDone?'done':''}" id="card-${t.id}">
+    <div class="task-main" style="cursor:default">
+      <div class="task-check ${isDone?'checked':''}" onclick="tickClass('${t.id}',event)">${isDone?'✓':''}</div>
+      <div class="task-info">
+        <div class="task-name ${isDone?'':''}">🏫 ${t.name}</div>
+        <div class="task-meta-row">
+          ${pill(t.subject)}
+          ${timeStr?`<span class="class-time-tag">${timeStr}</span>`:''}
+          ${t.location?`<span class="class-loc-tag">📍${t.location}</span>`:''}
+          ${t.basePoints?`<span class="pts-tag">${t.basePoints}pts</span>`:''}
+        </div>
+      </div>
+    </div>
+  </div>`;
+}
+
+function expandedHTML(t){
+  const isDone=t.status==='done', tst=ts(t.id);
+  let html='';
+  if(!isDone){
+    html+=`<div class="timer-panel">
+      <div class="clock-wrap">
+        <svg viewBox="0 0 84 84"><circle class="c-track" cx="42" cy="42" r="34"/>
+          <circle class="c-prog ${tst.state}" id="ring-${t.id}" cx="42" cy="42" r="34"
+            style="stroke-dashoffset:${214-Math.min(tst.elapsed/3600,1)*214}"/></svg>
+        <div class="clock-center">
+          <div class="clock-time" id="clk-${t.id}">${fmtSecs(tst.elapsed)}</div>
+          <div class="clock-lbl" id="clklbl-${t.id}">${tst.state==='running'?'focus':tst.state}</div>
+        </div>
+      </div>
+      <div class="timer-controls">
+        <div class="timer-status"><div class="sdot ${tst.state}" id="sdot-${t.id}"></div><span id="stxt-${t.id}">${stLbl(tst.state)}</span></div>
+        ${t.estSecs?`<div class="est-compare">Estimated: <span>${durFmt(t.estSecs)}</span></div>`:''}
+        <div class="btn-row" id="btnrow-${t.id}">${btnRow(t.id,tst.state)}</div>
+      </div>
+      <div class="qdivider"></div>
+      <div class="quick-area">
+        <div class="quick-lbl">Or log manually</div>
+        <div class="quick-inputs">
+          <input class="qinput" type="number" id="qh-${t.id}" placeholder="0" min="0" max="9">
+          <span class="qunit">hr</span>
+          <input class="qinput" type="number" id="qm-${t.id}" placeholder="25" min="0" max="59">
+          <span class="qunit">min</span>
+          <button class="tbtn-quick" onclick="quickDone('${t.id}')">✓ Done</button>
+        </div>
+      </div>
+    </div>`;
+  }
+  const sessData=isDone?t.sessions:tst.sessions;
+  if(sessData&&sessData.length){
+    html+=`<div class="sess-log visible" id="sesslog-${t.id}">
+      <div class="sess-log-title">Session log</div>
+      ${sessData.map(s=>`<div class="sess-row"><span>${s.a}</span><span>${s.t}</span></div>`).join('')}
+    </div>`;
+  } else {
+    html+=`<div class="sess-log" id="sesslog-${t.id}"><div class="sess-log-title">Session log</div></div>`;
+  }
+  if(isDone){
+    const mk=t.marking||{};
+    const pct=mk.saved?accPct(mk.totalQ,mk.wrongQ):null;
+    const pctColor=pct===null?'var(--text-3)':pct>=90?'var(--green)':pct>=70?'var(--amber)':'var(--red)';
+    let timeCompare='';
+    if(t.estSecs&&t.totalSecs){
+      const diff=t.totalSecs-t.estSecs, sign=diff>0?'+':'';
+      const color=Math.abs(diff)<300?'var(--green)':diff>0?'var(--red)':'var(--amber)';
+      timeCompare=`<span style="font-size:11px;color:${color};font-family:'DM Mono',monospace;align-self:flex-end;padding-bottom:4px">${sign}${durFmt(Math.abs(diff))} vs est.</span>`;
+    }
+    html+=`<div class="marking-panel">
+      <div class="panel-title"><span>Marking</span>${mk.saved?`<span style="font-size:11px;color:var(--green);font-weight:500">✓ Saved</span>`:''}</div>
+      <div class="marking-fields">
+        <div class="mf"><label>Total Q</label><input type="number" id="mk-total-${t.id}" value="${mk.totalQ||''}" placeholder="—" ${mk.saved?'disabled':''} oninput="liveAcc('${t.id}')"></div>
+        <div class="mf"><label>Wrong</label><input type="number" id="mk-wrong-${t.id}" value="${mk.wrongQ||''}" placeholder="—" ${mk.saved?'disabled':''} oninput="liveAcc('${t.id}')"></div>
+        <div class="acc-live" id="mk-acc-${t.id}" style="color:${pctColor}">${pct!==null?pct+'%':'—'}</div>
+        <div class="review-choice"><label>Need review?</label>
+          <div class="review-btns">
+            <button class="rbtn ${mk.needReview===true?'sel-yes':''}" id="rb-yes-${t.id}" onclick="selReview('${t.id}','yes')" ${mk.saved?'disabled':''}>📌 Yes</button>
+            <button class="rbtn ${mk.needReview===false?'sel-no':''}" id="rb-no-${t.id}" onclick="selReview('${t.id}','no')" ${mk.saved?'disabled':''}>✓ No</button>
+          </div>
+        </div>
+        ${timeCompare}
+        ${mk.saved?`<button class="tbtn-edit" onclick="editMarking('${t.id}')">✏️ Edit</button>`:`<button class="tbtn-save-marking" onclick="saveMarking('${t.id}')">Save Marking</button>`}
+      </div>
+    </div>`;
+    if(mk.needReview) html+=reviewSubHTML(t,'rv');
+  }
+  return html;
+}
+
+// ── REVIEW CARD (for review view) ──
+function reviewCardHTML(t){
+  const pct=accPct(t.marking.totalQ,t.marking.wrongQ);
+  const ago=daysAgoLabel(t.date);
+  const rv=t.review||{};
+  const exp=expandedReviewId===t.id;
+  const totalWrong=rv.totalWrong||t.marking.wrongQ||0;
+  const reviewed=rv.reviewedCount||0;
+  const progPct=totalWrong>0?Math.round((reviewed/totalWrong)*100):0;
+  const progColor=progPct===100?'var(--green)':progPct>=50?'var(--amber)':'var(--red)';
+  const agoStyle=`font-size:10px;font-weight:600;padding:2px 6px;border-radius:4px;background:${ago.cls==='urgent'?'var(--red-bg)':ago.cls==='warn'?'var(--amber-bg)':'var(--green-bg)'};color:${ago.cls==='urgent'?'var(--red)':ago.cls==='warn'?'var(--amber)':'var(--green)'}`;
+
+  return `<div class="task-card${exp?' active':''}" id="rcard-${t.id}">
+    <div class="task-main" onclick="expandReview('${t.id}',event)">
+      <div class="task-check ${rv.done?'checked':''}" onclick="tickReview('${t.id}',event)">${rv.done?'✓':''}</div>
+      <div class="task-info">
+        <div class="task-name" style="${rv.done?'text-decoration:line-through;color:var(--text-3)':''}">${t.subject} · ${t.name}</div>
+        <div class="task-meta-row" style="margin-bottom:${totalWrong>0?'5px':'0'}">
+          ${pill(t.subject)}<span class="task-date">${fmt(t.date)}</span>
+          <span style="${agoStyle}">${ago.text}</span>
+        </div>
+        ${totalWrong>0?`<div style="display:flex;align-items:center;gap:8px">
+          <div style="flex:1;height:5px;background:var(--border);border-radius:3px;overflow:hidden;max-width:160px">
+            <div style="width:${progPct}%;height:100%;background:${progColor};border-radius:3px"></div>
+          </div>
+          <span style="font-size:11px;font-family:'DM Mono',monospace;color:var(--text-3)">${reviewed}/${totalWrong} reviewed</span>
+        </div>`:''}
+      </div>
+      <div class="task-right">
+        <span class="acc-badge ${pct>=90?'acc-good':pct>=70?'acc-ok':'acc-bad'}">${pct!==null?pct+'%':'—'}</span>
+        ${rv.done?'<span class="review-tag rt-done">✓ Done</span>':'<span class="review-tag rt-needed">Pending</span>'}
+        <span class="chevron ${exp?'open':''}">▾</span>
+      </div>
+    </div>
+    ${exp?`<div class="task-expanded open">${reviewSubHTML(t,'rv2')}</div>`:''}
+  </div>`;
+}
+
+// ── REVIEW SUB PANEL ──
+function reviewSubHTML(t, prefix){
+  const mk=t.marking||{}, rv=t.review||{};
+  const totalWrong=rv.totalWrong||mk.wrongQ||0;
+  const reviewed=rv.reviewedCount||0;
+  const progPct=totalWrong>0?Math.round((reviewed/totalWrong)*100):0;
+  const progColor=progPct===100?'var(--green)':progPct>=50?'var(--amber)':'var(--red)';
+  const tst=getReviewTS(t.id);
+  const isDone=rv.done;
+  const pct=accPct(mk.totalQ,mk.wrongQ);
+  const accColor=pct===null?'var(--text-3)':pct>=90?'var(--green)':pct>=70?'var(--amber)':'var(--red)';
+
+  return `<div class="review-sub" id="rsub-${t.id}">
+    <div class="review-sub-title">
+      <span>📌 Review needed &nbsp;<span style="font-size:11px;font-weight:400;color:${accColor}">${pct!==null?pct+'% accuracy':''}</span></span>
+      ${isDone?'<span class="review-done-badge">✓ Complete</span>':''}
+    </div>
+    ${totalWrong>0?`<div style="font-size:11px;color:var(--text-3);margin-bottom:6px">Total wrong: <strong style="color:var(--text)">${totalWrong} questions</strong></div>
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+      <div style="flex:1;height:6px;background:var(--border);border-radius:3px;overflow:hidden">
+        <div style="width:${progPct}%;height:100%;background:${progColor};border-radius:3px"></div>
+      </div>
+      <span style="font-size:11px;font-family:'DM Mono',monospace;color:var(--text-2)">${reviewed}/${totalWrong} done</span>
+    </div>`:''}
+    ${!isDone&&totalWrong>0?`<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap">
+      <span style="font-size:11px;color:var(--text-3)">Reviewed today:</span>
+      <input type="number" id="${prefix}-rcount-${t.id}" value="${reviewed}" min="0" max="${totalWrong}"
+        style="width:56px;padding:5px 8px;border:1px solid var(--border2);border-radius:6px;font-size:13px;font-family:'DM Mono',monospace;text-align:center"
+        oninput="updateReviewProgress('${t.id}','${prefix}')">
+      <span style="font-size:11px;color:var(--text-3)">/ ${totalWrong}</span>
+    </div>`:''}
+    <div style="margin-bottom:10px">
+      <div style="font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;color:var(--text-3);margin-bottom:4px">Notes / next steps</div>
+      <textarea id="${prefix}-notes-${t.id}" ${isDone?'disabled':''} placeholder="e.g. Done Q1–Q3, next time start from Q4…"
+        style="width:100%;height:54px;padding:7px 10px;border:1px solid var(--border2);border-radius:6px;font-size:12px;font-family:'DM Sans',sans-serif;resize:vertical;${isDone?'background:var(--bg);color:var(--text-3)':''}">${rv.notes||''}</textarea>
+    </div>
+    ${!isDone?`<div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;flex-wrap:wrap">
+      <div class="clock-wrap" style="width:64px;height:64px">
+        <svg viewBox="0 0 64 64" style="width:64px;height:64px">
+          <circle class="c-track" cx="32" cy="32" r="26"/>
+          <circle class="c-prog ${tst.state}" id="rv-ring-${t.id}" cx="32" cy="32" r="26"
+            style="stroke-dasharray:163;stroke-dashoffset:${163-Math.min(tst.elapsed/3600,1)*163}"/>
+        </svg>
+        <div class="clock-center">
+          <div style="font-family:'DM Mono',monospace;font-size:11px;font-weight:500" id="rv-clk-${t.id}">${fmtSecs(tst.elapsed)}</div>
+        </div>
+      </div>
+      <div>
+        <div style="font-size:11px;color:var(--text-3);margin-bottom:6px">Review time: <span style="color:var(--text);font-weight:600" id="rv-dur-${t.id}">${durFmt(tst.elapsed)||'—'}</span></div>
+        <div class="btn-row" id="rv-btnrow-${t.id}">${reviewBtnRow(t.id,tst.state)}</div>
+      </div>
+    </div>`:`<div style="font-size:11px;color:var(--text-3);margin-bottom:10px">Review time: <strong>${durFmt(rv.totalSecs)||'—'}</strong></div>`}
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+      <div class="task-check ${isDone?'checked':''}" style="flex-shrink:0"
+        onclick="${isDone?`undoReview('${t.id}')`:`markReviewDone('${t.id}','${prefix}')`}">${isDone?'✓':''}</div>
+      ${isDone
+        ?`<button class="tbtn-undo-rv" onclick="undoReview('${t.id}')">✏️ Edit review</button>`
+        :`<button class="tbtn-mark-rv" onclick="markReviewDone('${t.id}','${prefix}')">✓ Mark Review Done</button>`}
+    </div>
+    ${rv.sessions&&rv.sessions.length?`<div style="margin-top:8px">
+      <div class="sess-log-title" style="margin-bottom:4px">Review session log</div>
+      ${rv.sessions.map(s=>`<div class="sess-row"><span>${s.a}</span><span>${s.t}</span></div>`).join('')}
+    </div>`:''}
+  </div>`;
+}
+
+// ── REVIEW HISTORY ──
+function openReviewHistory(){
+  const all = TASKS.filter(t=>t.marking&&t.marking.needReview&&t.review);
+  const pending = [...all.filter(t=>!t.review.done)].sort((a,b)=>(accPct(a.marking.totalQ,a.marking.wrongQ)??100)-(accPct(b.marking.totalQ,b.marking.wrongQ)??100));
+  const done    = [...all.filter(t=>t.review.done)].sort((a,b)=>new Date(b.date)-new Date(a.date));
+
+  let html = `<div style="margin-bottom:16px;display:flex;gap:6px">
+    <button class="rv-filter-btn sel" onclick="setRvFilter('all',this)">All (${all.length})</button>
+    <button class="rv-filter-btn" onclick="setRvFilter('pending',this)">Pending (${pending.length})</button>
+    <button class="rv-filter-btn" onclick="setRvFilter('done',this)">Done (${done.length})</button>
+  </div>
+  <div id="rvHistoryContent">`;
+
+  if(!all.length){ html+='<div class="empty">No review records yet.</div>'; }
+  else {
+    if(pending.length){ html+=`<div class="rv-group-title">Pending · ${pending.length}</div>`+pending.map(reviewPageCardHTML).join(''); }
+    if(done.length){    html+=`<div class="rv-group-title">Completed · ${done.length}</div>`+done.map(reviewPageCardHTML).join(''); }
+  }
+  html+='</div>';
+
+  showFullPage('📋 Review History', html);
+}
+
+function setRvFilter(f, btn){
+  document.querySelectorAll('.rv-filter-btn').forEach(b=>b.classList.remove('sel'));
+  btn.classList.add('sel');
+  const all     = TASKS.filter(t=>t.marking&&t.marking.needReview&&t.review);
+  const pending = [...all.filter(t=>!t.review.done)].sort((a,b)=>(accPct(a.marking.totalQ,a.marking.wrongQ)??100)-(accPct(b.marking.totalQ,b.marking.wrongQ)??100));
+  const done    = [...all.filter(t=>t.review.done)].sort((a,b)=>new Date(b.date)-new Date(a.date));
+  const list = f==='pending'?pending:f==='done'?done:[...pending,...done];
+  const content = document.getElementById('rvHistoryContent');
+  if(content) content.innerHTML = list.length ? list.map(reviewPageCardHTML).join('') : '<div class="empty">Nothing here.</div>';
+}
+
+function reviewPageCardHTML(t){
+  const pct=accPct(t.marking.totalQ,t.marking.wrongQ);
+  const ago=daysAgoLabel(t.date), rv=t.review||{};
+  const exp=expandedReviewId===t.id;
+  const totalWrong=rv.totalWrong||t.marking.wrongQ||0;
+  const reviewed=rv.reviewedCount||0;
+  const progPct=totalWrong>0?Math.round((reviewed/totalWrong)*100):0;
+  const progColor=progPct===100?'var(--green)':progPct>=50?'var(--amber)':'var(--red)';
+  const agoStyle=`font-size:10px;font-weight:600;padding:2px 6px;border-radius:4px;background:${ago.cls==='urgent'?'var(--red-bg)':ago.cls==='warn'?'var(--amber-bg)':'var(--green-bg)'};color:${ago.cls==='urgent'?'var(--red)':ago.cls==='warn'?'var(--amber)':'var(--green)'}`;
+
+  return `<div class="task-card${exp?' active':''}${rv.done?' done':''}" id="rhist-${t.id}" style="${rv.done?'border-left:3px solid var(--green)':''}">
+    <div class="task-main" onclick="expandReviewHist('${t.id}',event)">
+      <div class="task-check ${rv.done?'checked':''}" onclick="tickReview('${t.id}',event)">${rv.done?'✓':''}</div>
+      <div class="task-info">
+        <div class="task-name" style="${rv.done?'text-decoration:line-through;color:var(--text-3)':''}">${t.subject} · ${t.name}</div>
+        <div class="task-meta-row" style="margin-bottom:${totalWrong>0?'5px':'0'}">
+          ${pill(t.subject)}<span class="task-date">${fmt(t.date)}</span>
+          <span style="${agoStyle}">${ago.text}</span>
+          ${rv.done&&rv.totalSecs?`<span style="font-size:11px;font-family:'DM Mono',monospace;color:var(--text-3)">⏱ ${durFmt(rv.totalSecs)}</span>`:''}
+        </div>
+        ${totalWrong>0?`<div style="display:flex;align-items:center;gap:8px">
+          <div style="flex:1;height:5px;background:var(--border);border-radius:3px;overflow:hidden;max-width:160px">
+            <div style="width:${progPct}%;height:100%;background:${progColor};border-radius:3px"></div>
+          </div>
+          <span style="font-size:11px;font-family:'DM Mono',monospace;color:var(--text-3)">${reviewed}/${totalWrong} reviewed</span>
+        </div>`:''}
+      </div>
+      <div class="task-right">
+        <span class="acc-badge ${pct>=90?'acc-good':pct>=70?'acc-ok':'acc-bad'}">${pct!==null?pct+'%':'—'}</span>
+        ${rv.done?'<span class="review-tag rt-done">✓ Done</span>':'<span class="review-tag rt-needed">Pending</span>'}
+        <span class="chevron ${exp?'open':''}">▾</span>
+      </div>
+    </div>
+    ${exp?`<div class="task-expanded open">${reviewSubHTML(t,'rvh')}</div>`:''}
+  </div>`;
+}
+
+function expandReviewHist(id,e){
+  if(e&&e.target.closest('.task-check')) return;
+  expandedReviewId=expandedReviewId===id?null:id;
+  openReviewHistory();
+}
+
+// ── FULL PAGE OVERLAY ──
+function showFullPage(title, body){
+  let overlay=document.getElementById('fullPageOverlay');
+  if(!overlay){
+    overlay=document.createElement('div');
+    overlay.id='fullPageOverlay';
+    overlay.style.cssText='position:fixed;inset:0;background:var(--bg);z-index:100;overflow-y:auto;';
+    document.body.appendChild(overlay);
+  }
+  overlay.innerHTML=`
+    <div style="background:var(--surface);border-bottom:1px solid var(--border);padding:0 24px;height:56px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:10">
+      <span style="font-size:15px;font-weight:700">${title}</span>
+      <button onclick="closeFullPage()" style="padding:7px 14px;background:var(--bg);border:1px solid var(--border2);border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif">← Back</button>
+    </div>
+    <div style="max-width:860px;margin:0 auto;padding:22px 20px">${body}</div>`;
+  overlay.style.display='block';
+}
+function closeFullPage(){
+  const o=document.getElementById('fullPageOverlay');
+  if(o) o.style.display='none';
+  renderContent();
+}
+
+// ── REVIEW ACTIONS ──
+function expandReview(id,e){
+  if(e&&e.target.closest('.task-check')) return;
+  expandedReviewId=expandedReviewId===id?null:id;
+  renderContent();
+}
+
+function tickReview(id,e){
+  e.stopPropagation();
+  const task=TASKS.find(t=>t.id===id); if(!task||!task.review) return;
+  if(task.review.done){ undoReview(id); return; }
+  const tst=getReviewTS(id);
+  clearInterval(tst.interval);
+  const now=new Date().toLocaleTimeString('en-AU',{hour:'2-digit',minute:'2-digit'});
+  tst.sessions.push({a:'Done',t:'Today '+now});
+  task.review.done=true; task.review.totalSecs=tst.elapsed; task.review.sessions=[...tst.sessions];
+  const notesEl=document.getElementById('rv2-notes-'+id)||document.getElementById('rv-notes-'+id)||document.getElementById('rvh-notes-'+id);
+  if(notesEl) task.review.notes=notesEl.value||'';
+  const countEl=document.getElementById('rv2-rcount-'+id)||document.getElementById('rv-rcount-'+id)||document.getElementById('rvh-rcount-'+id);
+  if(countEl) task.review.reviewedCount=parseInt(countEl.value)||task.review.reviewedCount||0;
+  renderContent();
+}
+
+function markReviewDone(id,prefix){
+  const task=TASKS.find(t=>t.id===id); if(!task||!task.review) return;
+  const tst=getReviewTS(id);
+  clearInterval(tst.interval);
+  const now=new Date().toLocaleTimeString('en-AU',{hour:'2-digit',minute:'2-digit'});
+  tst.sessions.push({a:'Done',t:'Today '+now});
+  task.review.done=true; task.review.totalSecs=tst.elapsed; task.review.sessions=[...tst.sessions];
+  task.review.notes=document.getElementById(prefix+'-notes-'+id)?.value||'';
+  task.review.reviewedCount=parseInt(document.getElementById(prefix+'-rcount-'+id)?.value)||0;
+  renderContent();
+}
+
+function undoReview(id){
+  const task=TASKS.find(t=>t.id===id); if(!task||!task.review) return;
+  task.review.done=false; RVS[id]=null; renderContent();
+}
+
+function updateReviewProgress(id,prefix){
+  const task=TASKS.find(t=>t.id===id); if(!task||!task.review) return;
+  task.review.reviewedCount=parseInt(document.getElementById(prefix+'-rcount-'+id)?.value)||0;
+}
+
+// ── REVIEW TIMER ──
+function reviewBtnRow(id,state){
+  if(state==='idle')    return `<button class="tbtn tbtn-start"    style="font-size:11px;padding:5px 10px" onclick="rvStart('${id}')">▶ Start</button>`;
+  if(state==='running') return `<button class="tbtn tbtn-pause"    style="font-size:11px;padding:5px 10px" onclick="rvPause('${id}')">⏸ Pause</button><button class="tbtn tbtn-finish" style="font-size:11px;padding:5px 10px" onclick="rvFinish('${id}')">⏹ Stop</button>`;
+  if(state==='paused')  return `<button class="tbtn tbtn-continue" style="font-size:11px;padding:5px 10px" onclick="rvContinue('${id}')">▶ Continue</button>`;
+  if(state==='stopped') return `<button class="tbtn tbtn-continue" style="font-size:11px;padding:5px 10px" onclick="rvStart('${id}')">▶ Continue</button>`;
+  return '';
+}
+function rvStart(id){
+  const t=getReviewTS(id); if(t.state==='running') return;
+  t.state='running'; t.sessionStart=Date.now()-t.elapsed*1000;
+  const now=new Date().toLocaleTimeString('en-AU',{hour:'2-digit',minute:'2-digit'});
+  t.sessions.push({a:'Start',t:'Today '+now});
+  t.interval=setInterval(()=>{ t.elapsed=Math.floor((Date.now()-t.sessionStart)/1000); rvTickUI(id,t); },500);
+  rvUpdateCtrl(id,t);
+}
+function rvPause(id){
+  const t=getReviewTS(id); if(t.state!=='running') return;
+  clearInterval(t.interval); t.state='paused';
+  t.sessions.push({a:'Pause',t:'Today '+new Date().toLocaleTimeString('en-AU',{hour:'2-digit',minute:'2-digit'})});
+  rvUpdateCtrl(id,t);
+}
+function rvContinue(id){
+  const t=getReviewTS(id);
+  t.state='running'; t.sessionStart=Date.now()-t.elapsed*1000;
+  t.sessions.push({a:'Continue',t:'Today '+new Date().toLocaleTimeString('en-AU',{hour:'2-digit',minute:'2-digit'})});
+  t.interval=setInterval(()=>{ t.elapsed=Math.floor((Date.now()-t.sessionStart)/1000); rvTickUI(id,t); },500);
+  rvUpdateCtrl(id,t);
+}
+function rvFinish(id){
+  const t=getReviewTS(id); clearInterval(t.interval); t.state='stopped';
+  t.sessions.push({a:'Stop',t:'Today '+new Date().toLocaleTimeString('en-AU',{hour:'2-digit',minute:'2-digit'})});
+  rvUpdateCtrl(id,t);
+}
+function rvTickUI(id,t){
+  const clk=document.getElementById('rv-clk-'+id), ring=document.getElementById('rv-ring-'+id), dur=document.getElementById('rv-dur-'+id);
+  if(clk) clk.textContent=fmtSecs(t.elapsed);
+  if(ring){ ring.style.strokeDashoffset=163-Math.min(t.elapsed/3600,1)*163; ring.className='c-prog '+t.state; }
+  if(dur) dur.textContent=durFmt(t.elapsed)||'—';
+}
+function rvUpdateCtrl(id,t){
+  const br=document.getElementById('rv-btnrow-'+id);
+  if(br) br.innerHTML=reviewBtnRow(id,t.state);
+}
+
+// ── TASK TIMER ──
+function btnRow(id,state){
+  if(state==='idle')    return `<button class="tbtn tbtn-start"    onclick="tStart('${id}')">▶ Start</button>`;
+  if(state==='running') return `<button class="tbtn tbtn-pause"    onclick="tPause('${id}')">⏸ Pause</button><button class="tbtn tbtn-finish" onclick="tFinish('${id}')">⏹ Finish</button>`;
+  if(state==='paused')  return `<button class="tbtn tbtn-continue" onclick="tContinue('${id}')">▶ Continue</button>`;
+  if(state==='stopped') return `<button class="tbtn tbtn-continue" onclick="tStart('${id}')">▶ Continue</button><button class="tbtn tbtn-done" onclick="openDoneModal('${id}')">✅ Done</button>`;
+  return '';
+}
+function stLbl(s){ return {idle:'Ready to start',running:'Recording time…',paused:'Paused',stopped:'Session finished'}[s]||s; }
+
+function tStart(id){
+  const t=ts(id); if(t.state==='running') return;
+  t.state='running'; t.sessionStart=Date.now()-t.elapsed*1000;
+  t.sessions.push({a:'Start',t:'Today '+new Date().toLocaleTimeString('en-AU',{hour:'2-digit',minute:'2-digit'})});
+  t.interval=setInterval(()=>{ t.elapsed=Math.floor((Date.now()-t.sessionStart)/1000); tickUI(id,t); },500);
+  updateCtrl(id,t); refreshSessLog(id,t);
+}
+function tPause(id){
+  const t=ts(id); if(t.state!=='running') return;
+  clearInterval(t.interval); t.state='paused';
+  t.sessions.push({a:'Pause',t:'Today '+new Date().toLocaleTimeString('en-AU',{hour:'2-digit',minute:'2-digit'})});
+  updateCtrl(id,t); refreshSessLog(id,t);
+}
+function tContinue(id){
+  const t=ts(id); if(t.state!=='paused') return;
+  t.state='running'; t.sessionStart=Date.now()-t.elapsed*1000;
+  t.sessions.push({a:'Continue',t:'Today '+new Date().toLocaleTimeString('en-AU',{hour:'2-digit',minute:'2-digit'})});
+  t.interval=setInterval(()=>{ t.elapsed=Math.floor((Date.now()-t.sessionStart)/1000); tickUI(id,t); },500);
+  updateCtrl(id,t); refreshSessLog(id,t);
+}
+function tFinish(id){
+  const t=ts(id); clearInterval(t.interval); t.state='stopped';
+  t.sessions.push({a:'Finish',t:'Today '+new Date().toLocaleTimeString('en-AU',{hour:'2-digit',minute:'2-digit'})});
+  updateCtrl(id,t); refreshSessLog(id,t);
+}
+function tickUI(id,t){
+  const clk=document.getElementById('clk-'+id), ring=document.getElementById('ring-'+id);
+  if(clk) clk.textContent=fmtSecs(t.elapsed);
+  if(ring){ ring.style.strokeDashoffset=214-Math.min(t.elapsed/3600,1)*214; ring.className='c-prog '+t.state; }
+}
+function updateCtrl(id,t){
+  const br=document.getElementById('btnrow-'+id), dot=document.getElementById('sdot-'+id);
+  const stxt=document.getElementById('stxt-'+id), lbl=document.getElementById('clklbl-'+id);
+  if(br) br.innerHTML=btnRow(id,t.state);
+  if(dot) dot.className='sdot '+t.state;
+  if(stxt) stxt.textContent=stLbl(t.state);
+  if(lbl) lbl.textContent=t.state==='running'?'focus':t.state;
+}
+function refreshSessLog(id,t){
+  const el=document.getElementById('sesslog-'+id); if(!el) return;
+  el.className='sess-log visible';
+  el.innerHTML=`<div class="sess-log-title">Session log</div>`+t.sessions.map(s=>`<div class="sess-row"><span>${s.a}</span><span>${s.t}</span></div>`).join('');
+}
+function reattach(){
+  Object.keys(TS).forEach(id=>{
+    const t=TS[id]; if(!t||t.state!=='running') return;
+    clearInterval(t.interval); t.sessionStart=Date.now()-t.elapsed*1000;
+    t.interval=setInterval(()=>{ t.elapsed=Math.floor((Date.now()-t.sessionStart)/1000); tickUI(id,t); updateCtrl(id,t); },500);
+  });
+}
+
+// ── EXPAND ──
+function expand(id,e){
+  if(e&&(e.target.closest('.task-check')||e.target.closest('button'))) return;
+  expandedId=expandedId===id?null:id; renderContent();
+}
+function expandAndStart(id,e){
+  e.stopPropagation(); expandedId=id; renderContent();
+  const tst=ts(id); if(tst.state==='idle'||tst.state==='stopped') tStart(id);
+}
+
+// ── DONE MODAL ──
+function openDoneModal(id){
+  pendingDoneId=id;
+  const t=ts(id);
+  const te=document.getElementById('doneTimeEntry');
+  if(t.elapsed>0){
+    document.getElementById('doneModalSub').textContent=`Time recorded: ${durFmt(t.elapsed)}`;
+    te.style.display='none';
+  } else {
+    document.getElementById('doneModalSub').textContent='No timer recorded. How long did it take?';
+    document.getElementById('done-h').value=''; document.getElementById('done-m').value='';
+    te.style.display='block';
+  }
+  openModal('doneModal');
+}
+function quickDone(id){
+  const h=parseInt(document.getElementById('qh-'+id)?.value)||0;
+  const m=parseInt(document.getElementById('qm-'+id)?.value)||0;
+  ts(id).elapsed=(h*60+m)*60; pendingDoneId=id;
+  document.getElementById('doneModalSub').textContent=`Time logged: ${durFmt(ts(id).elapsed)||'—'}`;
+  document.getElementById('doneTimeEntry').style.display='none';
+  openModal('doneModal');
+}
+function confirmDone(){
+  const task=TASKS.find(t=>t.id===pendingDoneId); if(!task) return;
+  const tst=ts(pendingDoneId); clearInterval(tst.interval);
+  if(tst.elapsed===0){
+    const h=parseInt(document.getElementById('done-h').value)||0;
+    const m=parseInt(document.getElementById('done-m').value)||0;
+    if(h===0&&m===0){ alert('Please enter how long it took.'); return; }
+    tst.elapsed=(h*60+m)*60;
+    tst.sessions.push({a:'Manual',t:'Today '+new Date().toLocaleTimeString('en-AU',{hour:'2-digit',minute:'2-digit'})});
+  } else {
+    tst.sessions.push({a:'Done',t:'Today '+new Date().toLocaleTimeString('en-AU',{hour:'2-digit',minute:'2-digit'})});
+  }
+  task.status='done'; task.totalSecs=tst.elapsed; task.sessions=[...tst.sessions];
+  task.marking={totalQ:null,wrongQ:null,needReview:null,saved:false}; task.review=null;
+  expandedId=pendingDoneId; closeModal('doneModal'); renderContent();
+}
+
+// ── TICK ──
+function tickTask(id,e){
+  e.stopPropagation();
+  const task=TASKS.find(t=>t.id===id); if(!task) return;
+  if(task.status==='done'){ undoTask(id); return; }
+  const tst=ts(id);
+  if(tst.state==='running'||tst.state==='paused'){ alert('Please finish the timer session first.'); return; }
+  openDoneModal(id);
+}
+function tickClass(id,e){
+  e.stopPropagation();
+  const task=TASKS.find(t=>t.id===id); if(!task) return;
+  task.status=task.status==='done'?'pending':'done'; renderContent();
+}
+function undoTask(id){
+  const task=TASKS.find(t=>t.id===id); if(!task) return;
+  task.status='pending'; task.totalSecs=0; task.sessions=[]; task.marking=null; task.review=null;
+  TS[id]=null; expandedId=null; renderContent();
+}
+
+// ── MARKING ──
+function liveAcc(id){
+  const total=parseInt(document.getElementById('mk-total-'+id)?.value)||0;
+  const wrong=parseInt(document.getElementById('mk-wrong-'+id)?.value)||0;
+  const disp=document.getElementById('mk-acc-'+id); if(!disp) return;
+  if(total>0){ const pct=Math.round(((total-wrong)/total)*100); disp.textContent=pct+'%'; disp.style.color=pct>=90?'var(--green)':pct>=70?'var(--amber)':'var(--red)'; }
+  else { disp.textContent='—'; disp.style.color='var(--text-3)'; }
+}
+function selReview(id,choice){
+  markingReview[id]=choice;
+  document.getElementById('rb-yes-'+id).className='rbtn'+(choice==='yes'?' sel-yes':'');
+  document.getElementById('rb-no-'+id).className ='rbtn'+(choice==='no' ?' sel-no' :'');
+}
+function saveMarking(id){
+  const task=TASKS.find(t=>t.id===id); if(!task) return;
+  const total=parseInt(document.getElementById('mk-total-'+id)?.value)||null;
+  const wrong=parseInt(document.getElementById('mk-wrong-'+id)?.value)||null;
+  const needRv=markingReview[id]==='yes';
+  task.marking={totalQ:total,wrongQ:wrong,needReview:needRv,saved:true};
+  task.review=needRv?{done:false,notes:'',reviewedCount:0,totalWrong:wrong||0,sessions:[],totalSecs:0}:null;
+  renderContent();
+}
+function editMarking(id){
+  const task=TASKS.find(t=>t.id===id); if(!task||!task.marking) return;
+  task.marking.saved=false; renderContent();
+}
+
+// ── MODAL HELPERS ──
+function openModal(id){ document.getElementById(id).classList.add('open'); }
+function closeModal(id){ document.getElementById(id).classList.remove('open'); }
+
+// ── ADD TASK FORM ──
+function pickSubject(s,btn){
+  atSubject=s;
+  document.querySelectorAll('#at-subject-picker .pick-btn').forEach(b=>b.classList.remove('sel'));
+  btn.classList.add('sel');
+}
+function pickClassType(s,btn){
+  acType=s;
+  document.querySelectorAll('#ac-type-picker .pick-btn').forEach(b=>b.classList.remove('sel'));
+  btn.classList.add('sel');
+  const nameEl=document.getElementById('ac-name');
+  if(nameEl&&!nameEl.value) nameEl.placeholder=s+' Lesson';
+}
+function pickEst(v,btn,prefix){
+  atEstMins=v==='custom'?null:v;
+  document.querySelectorAll(`#${prefix}-est-picker .pick-btn`).forEach(b=>b.classList.remove('sel'));
+  btn.classList.add('sel');
+  const custom=document.getElementById(prefix+'-est-custom');
+  if(custom) custom.style.display=v==='custom'?'flex':'none';
+}
+function pickRecur(v,btn,prefix){
+  if(prefix==='at') atRecur=v; else acRecur=v;
+  document.querySelectorAll(`#${prefix}-recur-picker .pick-btn`).forEach(b=>b.classList.remove('sel'));
+  btn.classList.add('sel');
+  const opts=document.getElementById(prefix+'-recur-options');
+  const dayF=document.getElementById(prefix+'-day-field');
+  const monthF=document.getElementById(prefix+'-monthday-field');
+  const oneoff=document.getElementById(prefix+'-oneoff-date');
+  if(opts) opts.style.display=v==='none'?'none':'block';
+  if(dayF) dayF.style.display=v==='weekly'?'block':'none';
+  if(monthF) monthF.style.display=v==='monthly'?'block':'none';
+  if(oneoff) oneoff.style.display=v==='none'?'block':'none';
+}
+function getSelectedDays(pickerId){
+  const map={Mo:'Mon',Tu:'Tue',We:'Wed',Th:'Thu',Fr:'Fri',Sa:'Sat',Su:'Sun'};
+  return [...document.querySelectorAll(`#${pickerId} .day-btn.sel`)].map(b=>map[b.textContent]||b.textContent);
+}
+
+function addTask(){
+  const dateVal=document.getElementById('at-date').value;
+  const details=document.getElementById('at-details').value.trim();
+  if(!dateVal||!atSubject||!details){ alert('Please fill in date, subject, and task details.'); return; }
+  let estSecs=atEstMins?atEstMins*60:null;
+  if(!estSecs){
+    const h=parseInt(document.getElementById('at-est-h')?.value)||0;
+    const m=parseInt(document.getElementById('at-est-m')?.value)||0;
+    if(h||m) estSecs=(h*60+m)*60;
+  }
+  const basePoints=parseInt(document.getElementById('at-points').value)||0;
+  const recur=atRecur||'none';
+  if(recur!=='none'){
+    let days=[];
+    if(recur==='weekly') days=getSelectedDays('at-day-picker');
+    if(recur==='monthly'){ const md=document.getElementById('at-monthday').value; if(md) days=[md]; }
+    const startDate=document.getElementById('at-start-date').value||dateVal;
+    const endDate=document.getElementById('at-end-date').value||'';
+    RECURRING.push({id:'R'+String(recurIdCounter++).padStart(3,'0'),type:'task',name:details,subject:atSubject,
+      details,estSecs,basePoints,freq:recur,days,startDate,endDate,active:true,skipDates:[]});
+    generateRecurring();
+  } else {
+    TASKS.push({id:'T'+String(taskIdCounter++).padStart(3,'0'),type:'task',name:details,subject:atSubject,
+      date:new Date(dateVal+'T00:00:00'),status:'pending',estSecs,basePoints,
+      totalSecs:0,marking:null,sessions:[],review:null,recurId:null});
+  }
+  closeModal('addTaskModal');
+  // reset form
+  atSubject=null; atEstMins=null; atRecur='none';
+  document.getElementById('at-details').value='';
+  document.querySelectorAll('#addTaskModal .pick-btn').forEach(b=>b.classList.remove('sel'));
+  document.querySelector('#at-recur-picker .pick-btn').classList.add('sel');
+  document.getElementById('at-recur-options').style.display='none';
+  document.getElementById('at-est-custom').style.display='none';
+  document.getElementById('at-points').value='';
+  renderContent();
+}
+
+function addClass(){
+  const type=acType; const startTime=document.getElementById('ac-start').value;
+  if(!type||!startTime){ alert('Please select class type and start time.'); return; }
+  const name=document.getElementById('ac-name').value.trim()||type+' Lesson';
+  const endTime=document.getElementById('ac-end').value;
+  const location=document.getElementById('ac-location').value.trim();
+  const basePoints=parseInt(document.getElementById('ac-points').value)||0;
+  const recur=acRecur||'none';
+  if(recur!=='none'){
+    let days=[];
+    if(recur==='weekly') days=getSelectedDays('ac-day-picker');
+    if(recur==='monthly'){ const md=document.getElementById('ac-monthday').value; if(md) days=[md]; }
+    const startDate=document.getElementById('ac-start-date').value||fmtISO(today);
+    const endDate=document.getElementById('ac-end-date').value||'';
+    RECURRING.push({id:'R'+String(recurIdCounter++).padStart(3,'0'),type:'class',name,subject:type,
+      startTime,endTime,location,basePoints,freq:recur,days,startDate,endDate,active:true,skipDates:[]});
+    generateRecurring();
+  } else {
+    const dateVal=document.getElementById('ac-date').value;
+    if(!dateVal){ alert('Please select a date.'); return; }
+    TASKS.push({id:'T'+String(taskIdCounter++).padStart(3,'0'),type:'class',name,subject:type,
+      startTime,endTime,location,date:new Date(dateVal+'T00:00:00'),
+      status:'pending',recurId:null,basePoints,sessions:[],marking:null,review:null,totalSecs:0,estSecs:null});
+  }
+  closeModal('addClassModal');
+  acType=null; acRecur='none';
+  document.querySelectorAll('#addClassModal .pick-btn').forEach(b=>b.classList.remove('sel'));
+  document.querySelector('#ac-recur-picker .pick-btn').classList.add('sel');
+  document.getElementById('ac-recur-options').style.display='none';
+  document.getElementById('ac-oneoff-date').style.display='block';
+  document.getElementById('ac-name').value=''; document.getElementById('ac-start').value='';
+  document.getElementById('ac-end').value=''; document.getElementById('ac-location').value='';
+  document.getElementById('ac-points').value='';
+  renderContent();
+}
+
+// ── RECURRING MANAGE ──
+function openRecurringModal(){
+  renderRecurringList();
+  openModal('recurringModal');
+}
+function renderRecurringList(){
+  const list=document.getElementById('recurringList');
+  if(!RECURRING.length){ list.innerHTML='<div class="empty">No recurring rules yet.</div>'; return; }
+  list.innerHTML=RECURRING.map(r=>{
+    const freqLabel=r.freq==='daily'?'Daily':r.freq==='weekly'?`Weekly · ${r.days.join(', ')}`:r.freq==='monthly'?`Monthly · day ${r.days.join(',')}`:r.freq;
+    const timeStr=r.type==='class'&&r.startTime?`${fmtTime(r.startTime)}–${fmtTime(r.endTime)}`:'';
+    const isExp=expandedRecurId===r.id;
+    const isSkipped=r.skipDates&&r.skipDates.some(s=>fmtISO(today)>=s.from&&fmtISO(today)<=s.to);
+    return `<div class="recurring-item">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px">
+        <div>
+          <div class="ri-name">${r.type==='class'?'🏫 ':'📝 '}${r.name} <span style="font-size:11px;font-weight:400;color:var(--text-3)">· ${r.subject}</span></div>
+          <div class="ri-meta">
+            <span>${freqLabel}</span>
+            <span>${r.startDate}${r.endDate?' → '+r.endDate:' → no end'}</span>
+            ${r.estSecs?`<span>est. ${durFmt(r.estSecs)}</span>`:''}
+            ${r.basePoints?`<span>${r.basePoints}pts</span>`:''}
+            ${timeStr?`<span>🕓 ${timeStr}</span>`:''}
+            ${r.location?`<span>📍${r.location}</span>`:''}
+            ${r.skipDates&&r.skipDates.length?`<span style="color:var(--amber)">${r.skipDates.length} skip period(s)</span>`:''}
+          </div>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex-shrink:0">
+          <span class="ri-status ${!r.active?'ri-paused':isSkipped?'ri-paused':'ri-active'}">${!r.active?'Paused':isSkipped?'Skipped':'Active'}</span>
+          <div class="ri-actions" style="margin-top:0">
+            <button class="ri-btn" onclick="toggleRecurExp('${r.id}')">${isExp?'▴ Less':'▾ More'}</button>
+            <button class="ri-btn" onclick="toggleRecurring('${r.id}')">${r.active?'Pause':'Resume'}</button>
+            <button class="ri-btn danger" onclick="deleteRecurring('${r.id}')">Delete</button>
+          </div>
+        </div>
+      </div>
+      ${isExp?`<div style="border-top:1px solid var(--border);margin-top:10px;padding-top:10px;display:flex;flex-direction:column;gap:12px">
+        <div>
+          <div style="font-size:10px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:var(--text-3);margin-bottom:6px">Edit Date Range</div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+            <div style="display:flex;flex-direction:column;gap:3px"><span style="font-size:10px;color:var(--text-3)">Start</span><input type="date" value="${r.startDate}" id="ri-start-${r.id}" style="padding:6px 8px;border:1px solid var(--border2);border-radius:6px;font-size:13px;font-family:'DM Mono',monospace"></div>
+            <div style="display:flex;flex-direction:column;gap:3px"><span style="font-size:10px;color:var(--text-3)">End (optional)</span><input type="date" value="${r.endDate||''}" id="ri-end-${r.id}" style="padding:6px 8px;border:1px solid var(--border2);border-radius:6px;font-size:13px;font-family:'DM Mono',monospace"></div>
+            <button class="ri-btn" style="align-self:flex-end" onclick="saveRecurDates('${r.id}')">Save</button>
+          </div>
+        </div>
+        <div>
+          <div style="font-size:10px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:var(--text-3);margin-bottom:6px">Add Skip Period</div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+            <div style="display:flex;flex-direction:column;gap:3px"><span style="font-size:10px;color:var(--text-3)">From</span><input type="date" id="ri-skip-from-${r.id}" style="padding:6px 8px;border:1px solid var(--border2);border-radius:6px;font-size:13px;font-family:'DM Mono',monospace"></div>
+            <div style="display:flex;flex-direction:column;gap:3px"><span style="font-size:10px;color:var(--text-3)">To</span><input type="date" id="ri-skip-to-${r.id}" style="padding:6px 8px;border:1px solid var(--border2);border-radius:6px;font-size:13px;font-family:'DM Mono',monospace"></div>
+            <button class="ri-btn" style="align-self:flex-end;background:var(--amber-bg);color:var(--amber);border-color:#FDE68A" onclick="addSkip('${r.id}')">Add skip</button>
+          </div>
+          ${r.skipDates&&r.skipDates.length?`<div style="margin-top:8px;display:flex;flex-direction:column;gap:4px">
+            ${r.skipDates.map((s,i)=>`<div style="display:flex;align-items:center;justify-content:space-between;padding:5px 10px;background:var(--amber-bg);border-radius:6px;font-size:12px;font-family:'DM Mono',monospace;color:var(--amber)">
+              <span>${s.from} → ${s.to}</span>
+              <button onclick="removeSkip('${r.id}',${i})" style="background:none;border:none;cursor:pointer;color:var(--amber);font-size:13px">✕</button>
+            </div>`).join('')}
+          </div>`:''}
+        </div>
+      </div>`:''}
+    </div>`;
+  }).join('');
+}
+function toggleRecurExp(id){ expandedRecurId=expandedRecurId===id?null:id; renderRecurringList(); }
+function toggleRecurring(id){ const r=RECURRING.find(r=>r.id===id); if(r) r.active=!r.active; renderRecurringList(); }
+function deleteRecurring(id){ if(!confirm('Delete this rule? Existing records remain.')) return; RECURRING=RECURRING.filter(r=>r.id!==id); renderRecurringList(); }
+function saveRecurDates(id){ const r=RECURRING.find(r=>r.id===id); if(!r) return; r.startDate=document.getElementById('ri-start-'+id).value||r.startDate; r.endDate=document.getElementById('ri-end-'+id).value||''; renderRecurringList(); }
+function addSkip(id){
+  const r=RECURRING.find(r=>r.id===id); if(!r) return;
+  const from=document.getElementById('ri-skip-from-'+id).value, to=document.getElementById('ri-skip-to-'+id).value;
+  if(!from||!to){ alert('Please select both dates.'); return; }
+  if(from>to){ alert('From must be before To.'); return; }
+  if(!r.skipDates) r.skipDates=[];
+  r.skipDates.push({from,to}); r.skipDates.sort((a,b)=>a.from.localeCompare(b.from));
+  renderRecurringList();
+}
+function removeSkip(id,idx){ const r=RECURRING.find(r=>r.id===id); if(r&&r.skipDates) r.skipDates.splice(idx,1); renderRecurringList(); }
+
+// ── STATS PAGE ──
+function openStats(){
+  const todayAll  = TASKS.filter(t=>fmtISO(t.date)===fmtISO(today));
+  const allDone   = TASKS.filter(t=>t.status==='done');
+  const todayDone = todayAll.filter(t=>t.status==='done');
+  const reviewPend= TASKS.filter(t=>t.marking&&t.marking.needReview&&t.review&&!t.review.done);
+  const reviewDone= TASKS.filter(t=>t.marking&&t.marking.needReview&&t.review&&t.review.done);
+
+  // calc total time
+  const totalSecs = allDone.reduce((a,t)=>a+(t.totalSecs||0),0);
+  const todaySecs = todayDone.reduce((a,t)=>a+(t.totalSecs||0),0);
+
+  // accuracy
+  const withMarking = allDone.filter(t=>t.marking&&t.marking.saved&&t.marking.totalQ);
+  const avgAcc = withMarking.length
+    ? Math.round(withMarking.reduce((a,t)=>a+accPct(t.marking.totalQ,t.marking.wrongQ),0)/withMarking.length)
+    : null;
+
+  // subject breakdown
+  const subjects = {};
+  allDone.forEach(t=>{
+    if(!subjects[t.subject]) subjects[t.subject]={secs:0,count:0,acc:[],pts:0};
+    subjects[t.subject].secs  += t.totalSecs||0;
+    subjects[t.subject].count += 1;
+    subjects[t.subject].pts   += t.basePoints||0;
+    if(t.marking&&t.marking.saved&&t.marking.totalQ)
+      subjects[t.subject].acc.push(accPct(t.marking.totalQ,t.marking.wrongQ));
+  });
+
+  const maxSecs = Math.max(...Object.values(subjects).map(s=>s.secs), 1);
+
+  const subjectRows = Object.entries(subjects).sort((a,b)=>b[1].secs-a[1].secs).map(([subj,s])=>{
+    const barW = Math.round((s.secs/maxSecs)*100);
+    const subAcc = s.acc.length ? Math.round(s.acc.reduce((a,b)=>a+b,0)/s.acc.length) : null;
+    const accColor = subAcc===null?'var(--text-3)':subAcc>=90?'var(--green)':subAcc>=70?'var(--amber)':'var(--red)';
+    return `<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+      <div style="width:80px;font-size:12px;font-weight:600;color:var(--text-2);flex-shrink:0">${subj}</div>
+      <div style="flex:1;height:8px;background:var(--border);border-radius:4px;overflow:hidden">
+        <div style="width:${barW}%;height:100%;background:var(--accent);border-radius:4px"></div>
+      </div>
+      <div style="width:50px;font-size:12px;font-family:'DM Mono',monospace;color:var(--text-2);text-align:right">${durFmt(s.secs)||'—'}</div>
+      <div style="width:36px;font-size:11px;font-family:'DM Mono',monospace;color:${accColor};text-align:right">${subAcc!==null?subAcc+'%':'—'}</div>
+    </div>`;
+  }).join('');
+
+  // last 7 days
+  const last7 = [];
+  for(let i=6;i>=0;i--){
+    const d=new Date(today); d.setDate(d.getDate()-i);
+    const dayStr=fmtISO(d);
+    const dayTasks=TASKS.filter(t=>fmtISO(t.date)===dayStr&&t.status==='done');
+    const daySecs=dayTasks.reduce((a,t)=>a+(t.totalSecs||0),0);
+    last7.push({label:d.toLocaleDateString('en-AU',{weekday:'short'}),secs:daySecs,isToday:i===0});
+  }
+  const maxDaySecs=Math.max(...last7.map(d=>d.secs),1);
+  const dayBars=last7.map(d=>`
+    <div style="display:flex;flex-direction:column;align-items:center;gap:4px;flex:1">
+      <div style="font-size:10px;font-family:'DM Mono',monospace;color:${d.secs>0?'var(--text-2)':'var(--text-3)'}">${d.secs>0?durFmt(d.secs):''}</div>
+      <div style="width:100%;background:var(--border);border-radius:4px;height:60px;display:flex;align-items:flex-end;overflow:hidden">
+        <div style="width:100%;height:${Math.round((d.secs/maxDaySecs)*100)}%;background:${d.isToday?'var(--accent)':'var(--accent-bg)'};border-radius:4px;transition:height 0.3s;min-height:${d.secs>0?'4px':'0'}"></div>
+      </div>
+      <div style="font-size:10px;font-weight:${d.isToday?'700':'500'};color:${d.isToday?'var(--accent)':'var(--text-3)'}">${d.label}</div>
+    </div>`).join('');
+
+  const statBox = (label, value, sub, color) =>
+    `<div style="background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:14px 16px;flex:1">
+      <div style="font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;color:var(--text-3);margin-bottom:4px">${label}</div>
+      <div style="font-size:22px;font-weight:700;font-family:'DM Mono',monospace;color:${color};line-height:1">${value}</div>
+      ${sub?`<div style="font-size:11px;color:var(--text-3);margin-top:3px">${sub}</div>`:''}
+    </div>`;
+
+  const html = `
+    <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:16px;margin-bottom:24px">
+      <div>
+        <div style="font-size:11px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-3);margin-bottom:10px">Today</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          ${statBox('Time Spent', durFmt(todaySecs)||'—', `${todayDone.length} tasks done`, 'var(--accent)')}
+          ${statBox('Pending', todayAll.filter(t=>t.status!=='done').length, 'tasks remaining', 'var(--amber)')}
+        </div>
+      </div>
+      <div>
+        <div style="font-size:11px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-3);margin-bottom:10px">All Time</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          ${statBox('Total Time', durFmt(totalSecs)||'—', `${allDone.length} tasks completed`, 'var(--green)')}
+          ${statBox('Avg Accuracy', avgAcc!==null?avgAcc+'%':'—', `${withMarking.length} marked tasks`, avgAcc>=90?'var(--green)':avgAcc>=70?'var(--amber)':'var(--red)')}
+        </div>
+      </div>
+    </div>
+
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:18px;margin-bottom:16px">
+      <div style="font-size:11px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-3);margin-bottom:14px">Last 7 Days</div>
+      <div style="display:flex;gap:6px;align-items:flex-end">${dayBars}</div>
+    </div>
+
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:18px;margin-bottom:16px">
+      <div style="font-size:11px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-3);margin-bottom:14px">By Subject</div>
+      ${subjectRows||'<div style="color:var(--text-3);font-size:13px">No data yet.</div>'}
+      <div style="font-size:10px;color:var(--text-3);margin-top:8px">Bar = time spent · Right column = accuracy</div>
+    </div>
+
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:18px">
+      <div style="font-size:11px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-3);margin-bottom:14px">Review Status</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        ${statBox('Pending', reviewPend.length, 'need review', 'var(--amber)')}
+        ${statBox('Completed', reviewDone.length, 'reviews done', 'var(--green)')}
+      </div>
+    </div>
+
+    <div style="margin-top:16px;padding:12px 16px;background:var(--amber-bg);border:1px solid #FDE68A;border-radius:10px;font-size:12px;color:var(--amber)">
+      💡 Stats will be more accurate once connected to Feishu — current data is from this session only.
+    </div>`;
+
+  showFullPage('📊 Stats', html);
+}
+
+// ── POINTS PAGE ──
+function openPoints(){
+  const html = `
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px;margin-bottom:16px;text-align:center">
+      <div style="font-size:40px;margin-bottom:8px">⭐</div>
+      <div style="font-size:36px;font-weight:700;font-family:'DM Mono',monospace;color:#9333EA">— pts</div>
+      <div style="font-size:13px;color:var(--text-3);margin-top:4px">Total points earned</div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-bottom:16px">
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px">
+        <div style="font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;color:var(--text-3);margin-bottom:6px">This Week</div>
+        <div style="font-size:24px;font-weight:700;font-family:'DM Mono',monospace;color:#9333EA">— pts</div>
+      </div>
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px">
+        <div style="font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;color:var(--text-3);margin-bottom:6px">This Month</div>
+        <div style="font-size:24px;font-weight:700;font-family:'DM Mono',monospace;color:#9333EA">— pts</div>
+      </div>
+    </div>
+
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:18px;margin-bottom:16px">
+      <div style="font-size:11px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-3);margin-bottom:14px">Points Rules</div>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;background:var(--bg);border-radius:8px">
+          <span style="font-size:13px;color:var(--text-2)">Complete a task</span>
+          <span style="font-size:13px;font-weight:600;color:#9333EA;font-family:'DM Mono',monospace">Base pts</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;background:var(--bg);border-radius:8px">
+          <span style="font-size:13px;color:var(--text-2)">Weekend bonus</span>
+          <span style="font-size:13px;font-weight:600;color:#9333EA;font-family:'DM Mono',monospace">×1.5</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;background:var(--bg);border-radius:8px">
+          <span style="font-size:13px;color:var(--text-2)">Morning bonus (before 10am)</span>
+          <span style="font-size:13px;font-weight:600;color:#9333EA;font-family:'DM Mono',monospace">×1.2</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;background:var(--bg);border-radius:8px">
+          <span style="font-size:13px;color:var(--text-2)">Complete review</span>
+          <span style="font-size:13px;font-weight:600;color:#9333EA;font-family:'DM Mono',monospace">+5 pts</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;background:var(--bg);border-radius:8px">
+          <span style="font-size:13px;color:var(--text-2)">100% accuracy</span>
+          <span style="font-size:13px;font-weight:600;color:#9333EA;font-family:'DM Mono',monospace">×2.0</span>
+        </div>
+      </div>
+    </div>
+
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:18px">
+      <div style="font-size:11px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-3);margin-bottom:10px">Recent History</div>
+      <div style="color:var(--text-3);font-size:13px;text-align:center;padding:20px">No records yet.</div>
+    </div>
+
+    <div style="margin-top:16px;padding:12px 16px;background:var(--accent-bg);border:1px solid #C7D2FE;border-radius:10px;font-size:12px;color:var(--accent)">
+      💡 Points rules and multipliers can be customised. Connect to Feishu to save history.
+    </div>`;
+  showFullPage('⭐ Points', html);
+}
+
+// ── ERROR BOOK PAGE ──
+function openErrorBook(){
+  // Group tasks with wrong answers by subject
+  const withErrors = TASKS.filter(t=>t.marking&&t.marking.saved&&t.marking.wrongQ>0);
+  const bySubject = {};
+  withErrors.forEach(t=>{
+    if(!bySubject[t.subject]) bySubject[t.subject]=[];
+    bySubject[t.subject].push(t);
+  });
+
+  const subjectSections = Object.entries(bySubject).map(([subj, tasks])=>{
+    const rows = tasks.sort((a,b)=>new Date(b.date)-new Date(a.date)).map(t=>{
+      const pct=accPct(t.marking.totalQ,t.marking.wrongQ);
+      const pctColor=pct>=90?'var(--green)':pct>=70?'var(--amber)':'var(--red)';
+      const rv=t.review||{};
+      return `<div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border)">
+        <div style="flex:1;min-width:0">
+          <div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${t.name}</div>
+          <div style="font-size:11px;color:var(--text-3);font-family:'DM Mono',monospace">${fmt(t.date)} · ${t.marking.wrongQ}/${t.marking.totalQ} wrong</div>
+        </div>
+        <span style="font-size:13px;font-weight:700;font-family:'DM Mono',monospace;color:${pctColor}">${pct}%</span>
+        <span style="font-size:10px;font-weight:600;padding:2px 7px;border-radius:4px;background:${rv.done?'var(--green-bg)':t.marking.needReview?'var(--amber-bg)':'var(--bg)'};color:${rv.done?'var(--green)':t.marking.needReview?'var(--amber)':'var(--text-3)'}">${rv.done?'Reviewed':t.marking.needReview?'Review needed':'—'}</span>
+      </div>`;
+    }).join('');
+    return `<div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px 18px;margin-bottom:12px">
+      <div style="font-size:12px;font-weight:700;color:var(--text-2);margin-bottom:4px">${subj}</div>
+      ${rows}
+    </div>`;
+  }).join('');
+
+  const html = `
+    <div style="display:flex;gap:8px;margin-bottom:16px">
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 16px;flex:1;text-align:center">
+        <div style="font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;color:var(--text-3);margin-bottom:4px">Total Wrong</div>
+        <div style="font-size:24px;font-weight:700;font-family:'DM Mono',monospace;color:var(--red)">${withErrors.reduce((a,t)=>a+(t.marking.wrongQ||0),0)}</div>
+        <div style="font-size:11px;color:var(--text-3)">across ${withErrors.length} tasks</div>
+      </div>
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 16px;flex:1;text-align:center">
+        <div style="font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;color:var(--text-3);margin-bottom:4px">Reviewed</div>
+        <div style="font-size:24px;font-weight:700;font-family:'DM Mono',monospace;color:var(--green)">${withErrors.filter(t=>t.review&&t.review.done).length}</div>
+        <div style="font-size:11px;color:var(--text-3)">of ${withErrors.filter(t=>t.marking.needReview).length} needing review</div>
+      </div>
+    </div>
+    ${subjectSections||'<div style="text-align:center;padding:40px;color:var(--text-3);font-size:13px">No errors recorded yet.<br>Complete and mark some tasks first.</div>'}
+    <div style="margin-top:4px;padding:12px 16px;background:var(--red-bg);border:1px solid #FECACA;border-radius:10px;font-size:12px;color:var(--red)">
+      💡 Error Book will show full wrong question details once connected to Feishu.
+    </div>`;
+
+  showFullPage('📖 Error Book', html);
+}
+
+// ── INIT ──
+renderContent();
+</script>
+</body>
+</html>
