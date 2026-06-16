@@ -112,7 +112,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
 .acc-bad{background:var(--red-bg);color:var(--red);}
 .review-tag{font-size:12px;font-weight:600;padding:3px 8px;border-radius:5px;}
 .rt-needed{background:var(--amber-bg);color:var(--amber);}
-.rt-done{background:var(--green-bg);color:var(--green);}
+.rt-done{background:var(--purple-bg);color:var(--purple);}
 .action-btn{padding:8px 16px;border-radius:8px;font-size:14px;font-weight:600;border:1px solid var(--border2);background:var(--bg);color:var(--text-2);cursor:pointer;font-family:'DM Sans',sans-serif;transition:all 0.15s;white-space:nowrap;}
 .action-btn:hover{background:var(--border);color:var(--text);}
 .action-btn.primary{background:var(--accent);color:white;border-color:var(--accent);}
@@ -249,7 +249,8 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
 .review-filter-row{display:flex;gap:6px;margin-left:auto;}
 .rv-filter-btn{padding:4px 12px;border:1px solid var(--border2);border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text-2);transition:all 0.15s;}
 .rv-filter-btn:hover{background:var(--border);}
-.rv-filter-btn.sel{background:var(--amber);color:white;border-color:var(--amber);}
+.rv-filter-btn.sel{background:var(--accent);color:white;border-color:var(--accent);}
+.rv-filter-btn.sel-amber{background:var(--amber);color:white;border-color:var(--amber);}
 .rv-group-title{font-size:11px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;color:var(--text-3);margin:14px 0 8px;}
 
 .empty{text-align:center;padding:32px 20px;color:var(--text-3);font-size:13px;}
@@ -442,6 +443,20 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
     <div class="field"><label>Location <span style="font-weight:400;color:var(--text-3)">(optional)</span></label><input type="text" id="ac-location" placeholder="e.g. Chatswood"></div>
     <div class="field-row">
       <div class="field">
+        <label>Price per lesson</label>
+        <input type="number" id="ac-price-per" placeholder="e.g. 80" min="0" style="font-family:'DM Mono',monospace;">
+      </div>
+      <div class="field">
+        <label>Total lessons</label>
+        <input type="number" id="ac-total-lessons" placeholder="e.g. 10" min="0" style="font-family:'DM Mono',monospace;">
+      </div>
+    </div>
+    <div class="field">
+      <label>Notes (teacher, payment, etc.)</label>
+      <textarea id="ac-class-notes" placeholder="e.g. Teacher: Ms Li, paid until July"></textarea>
+    </div>
+    <div class="field-row">
+      <div class="field">
         <label>Base Points</label>
         <input type="number" id="ac-points" placeholder="5" min="0" style="font-family:'DM Mono',monospace;">
       </div>
@@ -494,6 +509,46 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
     <div class="recurring-list" id="recurringList"></div>
     <div class="modal-actions" style="margin-top:16px">
       <button class="mbtn-cancel" onclick="closeModal('recurringModal')">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- REVIEW DONE MODAL -->
+<div class="modal-overlay" id="reviewDoneModal">
+  <div class="modal" style="max-width:360px">
+    <div class="modal-title">✅ Review Complete</div>
+    <div id="rvDoneTimeSummary" style="text-align:center;margin-bottom:16px">
+      <div style="font-size:38px;font-weight:700;font-family:'DM Mono',monospace;color:var(--amber)" id="rvDoneTimeDisplay">—</div>
+      <div style="font-size:13px;color:var(--text-3);margin-top:4px">review time</div>
+    </div>
+    <div id="rvDoneTimeEntry" style="display:none;margin-bottom:16px">
+      <div style="font-size:11px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;color:var(--text-3);margin-bottom:8px;text-align:center">How long did the review take?</div>
+      <div style="display:flex;align-items:center;gap:8px;justify-content:center">
+        <input type="number" id="rv-done-m" placeholder="10" min="0" max="300" style="width:72px;padding:10px;border:1px solid var(--border2);border-radius:8px;font-size:20px;font-family:'DM Mono',monospace;text-align:center;color:var(--text)">
+        <span style="font-size:14px;color:var(--text-3)">min</span>
+      </div>
+    </div>
+    <div class="field-row" style="margin-bottom:16px">
+      <div class="field" style="margin-bottom:0">
+        <label style="display:block;font-size:10px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:var(--text-3);margin-bottom:6px">Questions corrected today</label>
+        <input type="number" id="rv-done-corrected" placeholder="0" min="0"
+          style="width:100%;padding:9px 11px;border:1px solid var(--border2);border-radius:8px;font-size:16px;font-family:'DM Mono',monospace;color:var(--text)">
+      </div>
+      <div class="field" style="margin-bottom:0">
+        <label style="display:block;font-size:10px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:var(--text-3);margin-bottom:6px">of total wrong</label>
+        <input type="number" id="rv-done-total-wrong" placeholder="4" min="0"
+          style="width:100%;padding:9px 11px;border:1px solid var(--border2);border-radius:8px;font-size:16px;font-family:'DM Mono',monospace;color:var(--text);background:var(--bg)" disabled>
+      </div>
+    </div>
+    <div class="field" style="margin-bottom:16px">
+      <label style="display:block;font-size:10px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:var(--text-3);margin-bottom:6px">Points earned <span style="font-weight:400;color:var(--text-3)">(optional)</span></label>
+      <input type="number" id="rv-done-points" placeholder="e.g. 5" min="0"
+        style="width:100%;padding:9px 11px;border:1px solid var(--border2);border-radius:8px;font-size:16px;font-family:'DM Mono',monospace;color:var(--text)">
+    </div>
+    <div class="modal-note" style="margin-bottom:16px">Notes can be added in the review panel.</div>
+    <div class="modal-actions">
+      <button class="mbtn-cancel" onclick="closeModal('reviewDoneModal')">Cancel</button>
+      <button class="mbtn-confirm" onclick="confirmReviewDone()">✓ Confirm</button>
     </div>
   </div>
 </div>
@@ -597,6 +652,8 @@ generateRecurring();
 
 // ── TIMER STATE ──
 const TS={}, RVS={};
+const reviewTimerMode={};
+const reviewCountdownTarget={};
 const taskTimerMode={};        // 'stopwatch'|'countdown'|'pomodoro' per task
 const taskCountdownTarget={};  // seconds target per task
 const taskPomoState={};        // {round, phase} per task
@@ -610,6 +667,8 @@ function getReviewTS(id){ if(!RVS[id]) RVS[id]={state:'idle',elapsed:0,sessionSt
 
 // ── VIEW STATE ──
 let currentView = 'all';  // default: show everything
+let doneTypeFilter = 'all';
+let doneSubjectFilter = '';
 let expandedId = null, expandedReviewId = null, pendingDoneId = null;
 let atSubject = null, atEstMins = null, atRecur = 'none';
 let acType = null, acRecur = 'none';
@@ -624,6 +683,12 @@ document.getElementById('at-start-date').value = fmtISO(today);
 document.getElementById('ac-start-date').value  = fmtISO(today);
 
 // ── SET VIEW ──
+function setDoneFilter(type, val){
+  if(type==='type') doneTypeFilter=val;
+  else if(type==='subject') doneSubjectFilter=val;
+  renderContent();
+}
+
 function setView(view){
   // clicking the active filter again → cancel, show all
   currentView = currentView === view ? 'all' : view;
@@ -640,46 +705,108 @@ function setView(view){
 function renderContent(){
   const overdue    = TASKS.filter(t=>t.status==='overdue');
   const todayAll   = TASKS.filter(t=>fmtISO(t.date)===fmtISO(today));
-  const todayDone  = TASKS.filter(t=>fmtISO(t.date)===fmtISO(today)&&t.status==='done');
-  const reviewPend = TASKS.filter(t=>t.marking&&t.marking.needReview&&t.review&&!t.review.done);
+   const todayDone  = TASKS.filter(t=>fmtISO(t.date)===fmtISO(today)&&t.status==='done');
+   const reviewPend = TASKS.filter(t=>t.marking&&t.marking.needReview&&t.review&&!t.review.done);
+    const reviewDoneToday = TASKS.filter(t=>t.marking&&t.marking.needReview&&t.review&&t.review.done&&t.review.doneDate===fmtISO(today));
+    const allReviews = TASKS.filter(t=>t.marking&&t.marking.needReview&&t.review);
 
-  // update stats
-  document.getElementById('sTd').textContent = todayAll.length;
-  document.getElementById('sOv').textContent = overdue.length;
-  document.getElementById('sDn').textContent = todayDone.length;
-  document.getElementById('sRv').textContent = reviewPend.length;
+    // ALL done today = tasks done today + overdue completed today + reviews done today (each counted separately)
+    const overdueDoneToday = TASKS.filter(t=>t.status==='done'&&fmtISO(t.date)!==fmtISO(today)&&t.sessions&&t.sessions.some(s=>s.t&&s.t.includes('Today')));
+    const allDoneTasksToday = [...new Map([...todayDone,...overdueDoneToday].map(t=>[t.id,t])).values()];
+    const allDoneTasks2 = TASKS.filter(t=>t.status==='done');
+    const allDoneReviews2 = TASKS.filter(t=>t.review&&t.review.done);
+    const totalDoneCount = allDoneTasks2.length + allDoneReviews2.length;
 
-  const area = document.getElementById('contentArea');
+    document.getElementById('sTd').textContent = todayAll.length;
+    document.getElementById('sOv').textContent = overdue.length;
+    document.getElementById('sDn').textContent = totalDoneCount;
+    document.getElementById('sRv').textContent = reviewPend.length;
 
-  if(currentView==='all'){
-    // show everything: overdue + today + review pending
-    let html = '';
-    if(overdue.length)
-      html += sectionHTML('Overdue', overdue.length, 'badge-red', overdue.map(taskHTML).join(''));
-    const todayPend = todayAll.filter(t=>t.status!=='done');
-    const todayDoneList = todayAll.filter(t=>t.status==='done');
-    const todaySorted = [...todayPend, ...todayDoneList];
-    if(todaySorted.length)
-      html += sectionHTML('Today', todayAll.length, '', todaySorted.map(taskHTML).join(''));
-    if(reviewPend.length){
-      const rvSorted=[...reviewPend].sort((a,b)=>(accPct(a.marking.totalQ,a.marking.wrongQ)??100)-(accPct(b.marking.totalQ,b.marking.wrongQ)??100));
-      html += sectionHTML('Review Pending', reviewPend.length, 'badge-amber', rvSorted.map(reviewCardHTML).join(''));
+    const area = document.getElementById('contentArea');
+
+    if(currentView==='all'){
+      let html = '';
+      const overdueDone = TASKS.filter(t=>t.status==='done' && new Date(t.date)<today && fmtISO(t.date)!==fmtISO(today));
+      const overdueAll = [...overdue,...overdueDone];
+      if(overdueAll.length)
+        html += sectionHTML('Overdue', overdueAll.length, 'badge-red', overdueAll.map(taskHTML).join(''));
+      const todayPend = todayAll.filter(t=>t.status!=='done');
+      const todayDoneList = todayAll.filter(t=>t.status==='done');
+      const todayPendSort = [...todayPend].sort((a,b)=>a.subject.localeCompare(b.subject));
+      const todayDoneSort = [...todayDoneList].sort((a,b)=>a.subject.localeCompare(b.subject));
+      html += sectionHTML('Today', todayAll.length, '', [...todayPendSort,...todayDoneSort].map(taskHTML).join('')||emptyHTML('No tasks today.'));
+      if(allReviews.length){
+        const rvPend=[...allReviews.filter(t=>!t.review.done)].sort((a,b)=>(accPct(a.marking.totalQ,a.marking.wrongQ)??100)-(accPct(b.marking.totalQ,b.marking.wrongQ)??100));
+        const rvDone=allReviews.filter(t=>t.review.done);
+        html += sectionHTML('Review', allReviews.length, 'badge-amber', [...rvPend,...rvDone].map(reviewCardHTML).join(''));
+      }
+      if(!html) html = emptyHTML('Nothing to show today.');
+      area.innerHTML = html;
+    } else if(currentView==='today'){
+      const pending = [...todayAll.filter(t=>t.status!=='done')].sort((a,b)=>a.subject.localeCompare(b.subject));
+      const done    = [...todayAll.filter(t=>t.status==='done')].sort((a,b)=>a.subject.localeCompare(b.subject));
+      area.innerHTML = sectionHTML('Today', todayAll.length, '', [...pending,...done].map(taskHTML).join('')||emptyHTML('No tasks today.'));
+    } else if(currentView==='overdue'){
+      const overdueDone2 = TASKS.filter(t=>t.status==='done' && new Date(t.date)<today && fmtISO(t.date)!==fmtISO(today));
+      const overdueSort = [...overdue].sort((a,b)=>a.subject.localeCompare(b.subject));
+      const overdueDoneSort = [...overdueDone2].sort((a,b)=>a.subject.localeCompare(b.subject));
+      area.innerHTML = sectionHTML('Overdue', [...overdueSort,...overdueDoneSort].length, 'badge-red', [...overdueSort,...overdueDoneSort].map(taskHTML).join('')||emptyHTML('No overdue tasks.'));
+    } else if(currentView==='done'){
+      const allDoneTasks = TASKS.filter(t=>t.status==='done');
+      const allDoneReviews = TASKS.filter(t=>t.review&&t.review.done);
+      const allDoneCount = allDoneTasks.length + allDoneReviews.length;
+
+      // get unique subjects
+      const doneSubjects = [...new Set([...allDoneTasks.map(t=>t.subject),...allDoneReviews.map(t=>t.subject)])].sort();
+
+      // apply filters
+      let filteredTasks = [...allDoneTasks];
+      let filteredReviews = [...allDoneReviews];
+      if(doneTypeFilter==='hw')     { filteredTasks=filteredTasks.filter(t=>t.type!=='class'); filteredReviews=[]; }
+      else if(doneTypeFilter==='class')  { filteredTasks=filteredTasks.filter(t=>t.type==='class'); filteredReviews=[]; }
+      else if(doneTypeFilter==='review') { filteredTasks=[]; }
+      if(doneSubjectFilter){
+        filteredTasks=filteredTasks.filter(t=>t.subject===doneSubjectFilter);
+        filteredReviews=filteredReviews.filter(t=>t.subject===doneSubjectFilter);
+      }
+
+      // sort by subject within each group
+      const sortBySubject = arr => [...arr].sort((a,b)=>a.subject.localeCompare(b.subject));
+      filteredTasks = sortBySubject(filteredTasks);
+      filteredReviews = sortBySubject(filteredReviews);
+      const filteredCount = filteredTasks.length + filteredReviews.length;
+
+      const selectStyle = "padding:7px 12px;border:1px solid var(--border2);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;color:var(--text);background:white;cursor:pointer";
+      const filterBar = `<div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px;align-items:center">
+        <select onchange="setDoneFilter('type',this.value)" style="${selectStyle}">
+          <option value="all"   ${doneTypeFilter==='all'?'selected':''}>All types</option>
+          <option value="hw"    ${doneTypeFilter==='hw'?'selected':''}>📝 Homework</option>
+          <option value="class" ${doneTypeFilter==='class'?'selected':''}>🏫 Class</option>
+          <option value="review"${doneTypeFilter==='review'?'selected':''}>📌 Review</option>
+        </select>
+        <select onchange="setDoneFilter('subject',this.value)" style="${selectStyle}">
+          <option value="" ${!doneSubjectFilter?'selected':''}>All subjects</option>
+          ${doneSubjects.map(s=>`<option value="${s}" ${doneSubjectFilter===s?'selected':''}>${s}</option>`).join('')}
+        </select>
+        <span style="font-size:12px;color:var(--text-3)">${filteredCount} item${filteredCount!==1?'s':''}</span>
+      </div>`;
+
+      const doneContent = filteredTasks.map(taskHTML).join('') + filteredReviews.map(reviewCardHTML).join('');
+      area.innerHTML = `<div class="section">
+        <div class="section-header">
+          <div class="section-title">Done Today</div>
+          <span class="section-badge badge-green">${allDoneCount}</span>
+        </div>
+        ${filterBar}
+        ${doneContent||emptyHTML('Nothing matches this filter.')}
+      </div>`;
+
+    } else if(currentView==='review'){
+      const rvPend = [...allReviews.filter(t=>!t.review.done)].sort((a,b)=>(accPct(a.marking.totalQ,a.marking.wrongQ)??100)-(accPct(b.marking.totalQ,b.marking.wrongQ)??100));
+      const rvDone = allReviews.filter(t=>t.review.done);
+      const rvAll = [...rvPend,...rvDone];
+      area.innerHTML = sectionHTML('Review', allReviews.length, 'badge-amber', rvAll.map(reviewCardHTML).join('')||emptyHTML('No reviews yet.'));
     }
-    if(!html) html = emptyHTML('Nothing to show today.');
-    area.innerHTML = html;
-  } else if(currentView==='today'){
-    const pending = todayAll.filter(t=>t.status!=='done');
-    const done    = todayAll.filter(t=>t.status==='done');
-    const sorted  = [...pending, ...done];
-    area.innerHTML = sectionHTML('Today', todayAll.length, '', sorted.map(taskHTML).join('')||emptyHTML('No tasks today.'));
-  } else if(currentView==='overdue'){
-    area.innerHTML = sectionHTML('Overdue', overdue.length, 'badge-red', overdue.map(taskHTML).join('')||emptyHTML('No overdue tasks.'));
-  } else if(currentView==='done'){
-    area.innerHTML = sectionHTML('Done Today', todayDone.length, 'badge-green', todayDone.map(taskHTML).join('')||emptyHTML('Nothing completed yet today.'));
-  } else if(currentView==='review'){
-    const sorted = [...reviewPend].sort((a,b)=>(accPct(a.marking.totalQ,a.marking.wrongQ)??100)-(accPct(b.marking.totalQ,b.marking.wrongQ)??100));
-    area.innerHTML = sectionHTML('Review Pending', reviewPend.length, 'badge-amber', sorted.map(reviewCardHTML).join('')||emptyHTML('No pending reviews.'));
-  }
 
   reattach();
 }
@@ -725,8 +852,7 @@ function taskHTML(t){
     right+=`<span class="task-duration">${durFmt(t.totalSecs)||'—'}</span>`;
     if(t.marking&&t.marking.saved) right+=accBadge(pct);
     else right+=`<span class="marking-tag">Pending marking</span>`;
-    if(t.marking&&t.marking.needReview)
-      right+=`<span class="review-tag ${t.review&&t.review.done?'rt-done':'rt-needed'}">${t.review&&t.review.done?'✓ Reviewed':'📌 Review'}</span>`;
+
     if(t.basePoints) right+=`<span class="pts-tag">+${t.basePoints}pts</span>`;
   } else {
     const st=tst.state;
@@ -756,19 +882,40 @@ function taskHTML(t){
 function classCardHTML(t){
   const isDone=t.status==='done';
   const timeStr=t.startTime&&t.endTime?`${fmtTime(t.startTime)}–${fmtTime(t.endTime)}`:'';
-  return `<div class="task-card class-card ${isDone?'done':''}" id="card-${t.id}">
-    <div class="task-main" style="cursor:default">
+  const exp = expandedId===t.id;
+  const priceStr = t.pricePerLesson ? `$${t.pricePerLesson}/lesson${t.totalLessons?' · '+t.totalLessons+' lessons · total $'+(t.pricePerLesson*t.totalLessons):''}` : '';
+
+  return `<div class="task-card class-card ${isDone?'done':''}${exp?' active':''}" id="card-${t.id}">
+    <div class="task-main" onclick="expand('${t.id}',event)">
       <div class="task-check ${isDone?'checked':''}" onclick="tickClass('${t.id}',event)">${isDone?'✓':''}</div>
       <div class="task-info">
-        <div class="task-name ${isDone?'':''}">🏫 ${t.name}</div>
+        <div class="task-name">🏫 ${t.name}</div>
         <div class="task-meta-row">
           ${pill(t.subject)}
           ${timeStr?`<span class="class-time-tag">${timeStr}</span>`:''}
           ${t.location?`<span class="class-loc-tag">📍${t.location}</span>`:''}
-          ${t.basePoints?`<span class="pts-tag">${t.basePoints}pts</span>`:''}
+          ${priceStr?`<span style="font-size:11px;color:var(--text-3)">💰${priceStr}</span>`:''}
         </div>
       </div>
+      <div class="task-right">
+        ${t.basePoints?`<span class="pts-tag">+${t.basePoints}pts</span>`:''}
+        <span class="chevron ${exp?'open':''}">▾</span>
+      </div>
     </div>
+    ${exp?`<div class="task-expanded open">
+      <div style="padding:16px 18px;background:#FAFAF8;display:flex;flex-direction:column;gap:10px">
+        ${priceStr?`<div style="font-size:13px;color:var(--text-2)">💰 <strong>${priceStr}</strong></div>`:''}
+        ${t.classNotes?`<div>
+          <div style="font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;color:var(--text-3);margin-bottom:4px">Notes</div>
+          <div style="font-size:13px;color:var(--text-2);white-space:pre-wrap">${t.classNotes}</div>
+        </div>`:'<div style="font-size:13px;color:var(--text-3)">No notes added.</div>'}
+        <div>
+          <textarea id="cls-notes-${t.id}" placeholder="Add notes (teacher, payment, etc.)"
+            style="width:100%;height:70px;padding:8px 10px;border:1px solid var(--border2);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;resize:vertical">${t.classNotes||''}</textarea>
+          <button onclick="saveClassNotes('${t.id}')" style="margin-top:6px;padding:6px 14px;background:var(--accent);color:white;border:none;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif">Save notes</button>
+        </div>
+      </div>
+    </div>`:''}
   </div>`;
 }
 
@@ -873,7 +1020,7 @@ function expandedHTML(t){
         ${mk.saved?`<button class="tbtn-edit" onclick="editMarking('${t.id}')">✏️ Edit</button>`:`<button class="tbtn-save-marking" onclick="saveMarking('${t.id}')">Save Marking</button>`}
       </div>
     </div>`;
-    if(mk.needReview) html+=reviewSubHTML(t,'rv');
+    // review handled in separate Review section, not shown in task expansion
   }
   return html;
 }
@@ -892,9 +1039,9 @@ function reviewCardHTML(t){
 
   return `<div class="task-card${exp?' active':''}" id="rcard-${t.id}">
     <div class="task-main" onclick="expandReview('${t.id}',event)">
-      <div class="task-check ${rv.done?'checked':''}" onclick="tickReview('${t.id}',event)">${rv.done?'✓':''}</div>
+      <div class="task-check ${rv.done?'checked':''}" onclick="tickReview('${t.id}',event)" style="cursor:pointer">${rv.done?'✓':''}</div>
       <div class="task-info">
-        <div class="task-name" style="${rv.done?'text-decoration:line-through;color:var(--text-3)':''}">${t.subject} · ${t.name}</div>
+        <div class="task-name" style="${rv.done?'text-decoration:line-through;color:var(--text-3)':''}">${t.name}</div>
         <div class="task-meta-row" style="margin-bottom:${totalWrong>0?'5px':'0'}">
           ${pill(t.subject)}<span class="task-date">${fmt(t.date)}</span>
           <span style="${agoStyle}">${ago.text}</span>
@@ -907,8 +1054,10 @@ function reviewCardHTML(t){
         </div>`:''}
       </div>
       <div class="task-right">
+        ${(rv.totalSecs||(getReviewTS(t.id).elapsed>0?getReviewTS(t.id).elapsed:0))?`<span class="task-duration" style="background:var(--amber-bg);color:var(--amber)">📌 ${durFmt(rv.totalSecs||getReviewTS(t.id).elapsed)}</span>`:''}
         <span class="acc-badge ${pct>=90?'acc-good':pct>=70?'acc-ok':'acc-bad'}">${pct!==null?pct+'%':'—'}</span>
         ${rv.done?'<span class="review-tag rt-done">✓ Done</span>':'<span class="review-tag rt-needed">Pending</span>'}
+        ${rv.done&&rv.points?`<span class="pts-tag">+${rv.points}pts</span>`:''}
         <span class="chevron ${exp?'open':''}">▾</span>
       </div>
     </div>
@@ -916,6 +1065,7 @@ function reviewCardHTML(t){
   </div>`;
 }
 
+// ── REVIEW SUB PANEL ──
 // ── REVIEW SUB PANEL ──
 function reviewSubHTML(t, prefix){
   const mk=t.marking||{}, rv=t.review||{};
@@ -927,60 +1077,89 @@ function reviewSubHTML(t, prefix){
   const isDone=rv.done;
   const pct=accPct(mk.totalQ,mk.wrongQ);
   const accColor=pct===null?'var(--text-3)':pct>=90?'var(--green)':pct>=70?'var(--amber)':'var(--red)';
+  const rmode=reviewTimerMode[t.id]||'stopwatch';
 
   return `<div class="review-sub" id="rsub-${t.id}">
     <div class="review-sub-title">
-      <span>📌 Review needed &nbsp;<span style="font-size:11px;font-weight:400;color:${accColor}">${pct!==null?pct+'% accuracy':''}</span></span>
+      <span>📌 Review &nbsp;<span style="font-size:11px;font-weight:400;color:${accColor}">${pct!==null?pct+'% accuracy':''}</span></span>
       ${isDone?'<span class="review-done-badge">✓ Complete</span>':''}
     </div>
-    ${totalWrong>0?`<div style="font-size:11px;color:var(--text-3);margin-bottom:6px">Total wrong: <strong style="color:var(--text)">${totalWrong} questions</strong></div>
-    <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+
+    ${totalWrong>0?`
+    <div style="font-size:13px;color:var(--text-3);margin-bottom:6px">Total wrong: <strong style="color:var(--text)">${totalWrong} questions</strong></div>
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
       <div style="flex:1;height:6px;background:var(--border);border-radius:3px;overflow:hidden">
         <div style="width:${progPct}%;height:100%;background:${progColor};border-radius:3px"></div>
       </div>
-      <span style="font-size:11px;font-family:'DM Mono',monospace;color:var(--text-2)">${reviewed}/${totalWrong} done</span>
+      <span style="font-size:12px;font-family:'DM Mono',monospace;color:var(--text-2)">${reviewed}/${totalWrong} done</span>
     </div>`:''}
-    ${!isDone&&totalWrong>0?`<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap">
-      <span style="font-size:11px;color:var(--text-3)">Reviewed today:</span>
+
+    ${!isDone&&totalWrong>0?`<div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap">
+      <span style="font-size:13px;color:var(--text-3)">Reviewed today:</span>
       <input type="number" id="${prefix}-rcount-${t.id}" value="${reviewed}" min="0" max="${totalWrong}"
-        style="width:56px;padding:5px 8px;border:1px solid var(--border2);border-radius:6px;font-size:13px;font-family:'DM Mono',monospace;text-align:center"
+        style="width:60px;padding:6px 8px;border:1px solid var(--border2);border-radius:6px;font-size:15px;font-family:'DM Mono',monospace;text-align:center"
         oninput="updateReviewProgress('${t.id}','${prefix}')">
-      <span style="font-size:11px;color:var(--text-3)">/ ${totalWrong}</span>
+      <span style="font-size:13px;color:var(--text-3)">/ ${totalWrong}</span>
     </div>`:''}
-    <div style="margin-bottom:10px">
-      <div style="font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;color:var(--text-3);margin-bottom:4px">Notes / next steps</div>
-      <textarea id="${prefix}-notes-${t.id}" ${isDone?'disabled':''} placeholder="e.g. Done Q1–Q3, next time start from Q4…"
-        style="width:100%;height:54px;padding:7px 10px;border:1px solid var(--border2);border-radius:6px;font-size:12px;font-family:'DM Sans',sans-serif;resize:vertical;${isDone?'background:var(--bg);color:var(--text-3)':''}">${rv.notes||''}</textarea>
+
+    <div style="margin-bottom:12px">
+      <div style="font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;color:var(--text-3);margin-bottom:5px">Notes / next steps</div>
+      <textarea id="${prefix}-notes-${t.id}" ${isDone?'disabled':''} placeholder="e.g. Done Q1-Q3, next time start from Q4"
+        style="width:100%;height:60px;padding:8px 10px;border:1px solid var(--border2);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;resize:vertical;${isDone?'background:var(--bg);color:var(--text-3)':''}">${rv.notes||''}</textarea>
     </div>
-    ${!isDone?`<div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;flex-wrap:wrap">
-      <div class="clock-wrap" style="width:64px;height:64px">
-        <svg viewBox="0 0 64 64" style="width:64px;height:64px">
-          <circle class="c-track" cx="32" cy="32" r="26"/>
-          <circle class="c-prog ${tst.state}" id="rv-ring-${t.id}" cx="32" cy="32" r="26"
-            style="stroke-dasharray:163;stroke-dashoffset:${163-Math.min(tst.elapsed/3600,1)*163}"/>
-        </svg>
+
+    ${!isDone?`
+    <div style="display:flex;gap:6px;background:var(--bg);padding:4px;border-radius:10px;width:fit-content;margin-bottom:12px">
+      <button class="timer-mode-btn ${rmode==='stopwatch'?'active':''}" onclick="setReviewTimerMode('${t.id}','stopwatch','${prefix}',this)">↑ Stopwatch</button>
+      <button class="timer-mode-btn ${rmode==='countdown'?'active':''}" onclick="setReviewTimerMode('${t.id}','countdown','${prefix}',this)">↓ Countdown</button>
+      <button class="timer-mode-btn ${rmode==='pomodoro'?'active':''}" onclick="setReviewTimerMode('${t.id}','pomodoro','${prefix}',this)">🍅 Pomodoro</button>
+    </div>
+
+    ${rmode==='countdown'?`<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+      <span style="font-size:12px;color:var(--text-3)">Target:</span>
+      <input type="number" id="rv-cd-m-${t.id}" value="${Math.floor((reviewCountdownTarget[t.id]||600)/60)}" min="0" max="99"
+        style="width:52px;padding:6px;border:1px solid var(--border2);border-radius:6px;font-size:14px;font-family:'DM Mono',monospace;text-align:center">
+      <span style="font-size:12px;color:var(--text-3)">min</span>
+      <button onclick="setReviewCountdownTarget('${t.id}')" style="padding:5px 10px;background:var(--accent);color:white;border:none;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif">Set</button>
+    </div>`:''}
+
+    <div class="timer-panel" style="padding:14px;flex-wrap:wrap">
+      <div class="clock-wrap">
+        <svg viewBox="0 0 84 84"><circle class="c-track" cx="42" cy="42" r="34"/>
+          <circle class="c-prog ${tst.state}" id="rv-ring-${t.id}" cx="42" cy="42" r="34"
+            style="stroke-dashoffset:${214-Math.min(tst.elapsed/3600,1)*214}"/></svg>
         <div class="clock-center">
-          <div style="font-family:'DM Mono',monospace;font-size:11px;font-weight:500" id="rv-clk-${t.id}">${fmtSecs(tst.elapsed)}</div>
+          <div class="clock-time" id="rv-clk-${t.id}">${fmtSecs(tst.elapsed)}</div>
+          <div class="clock-lbl" id="rv-clklbl-${t.id}">${tst.state==='running'?'focus':tst.state}</div>
         </div>
       </div>
-      <div>
-        <div style="font-size:11px;color:var(--text-3);margin-bottom:6px">Review time: <span style="color:var(--text);font-weight:600" id="rv-dur-${t.id}">${durFmt(tst.elapsed)||'—'}</span></div>
+      <div class="timer-controls">
+        <div class="timer-status">
+          <div class="sdot ${tst.state}" id="rv-sdot-${t.id}"></div>
+          <span id="rv-stxt-${t.id}">${stLbl(tst.state)}</span>
+        </div>
         <div class="btn-row" id="rv-btnrow-${t.id}">${reviewBtnRow(t.id,tst.state)}</div>
       </div>
-    </div>`:`<div style="font-size:11px;color:var(--text-3);margin-bottom:10px">Review time: <strong>${durFmt(rv.totalSecs)||'—'}</strong></div>`}
-    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-      <div class="task-check ${isDone?'checked':''}" style="flex-shrink:0"
-        onclick="${isDone?`undoReview('${t.id}')`:`markReviewDone('${t.id}','${prefix}')`}">${isDone?'✓':''}</div>
-      ${isDone
-        ?`<button class="tbtn-undo-rv" onclick="undoReview('${t.id}')">✏️ Edit review</button>`
-        :`<button class="tbtn-mark-rv" onclick="markReviewDone('${t.id}','${prefix}')">✓ Mark Review Done</button>`}
-    </div>
+      <div class="qdivider"></div>
+      <div class="quick-area">
+        <div class="quick-lbl">Or log manually</div>
+        <div class="quick-inputs">
+          <input class="qinput" type="number" id="rv-qm-${t.id}" placeholder="10" min="0" max="599">
+          <span class="qunit">min</span>
+          <button class="tbtn-quick" onclick="quickReviewDone('${t.id}','${prefix}')">Done</button>
+        </div>
+      </div>
+    </div>`
+    :`<div style="font-size:13px;color:var(--text-3);margin-bottom:12px">Review time: <strong style="color:var(--text)">${durFmt(rv.totalSecs)||'—'}</strong></div>`}
+
     ${rv.sessions&&rv.sessions.length?`<div style="margin-top:8px">
       <div class="sess-log-title" style="margin-bottom:4px">Review session log</div>
       ${rv.sessions.map(s=>`<div class="sess-row"><span>${s.a}</span><span>${s.t}</span></div>`).join('')}
     </div>`:''}
   </div>`;
 }
+
+
 
 // ── REVIEW HISTORY ──
 function openReviewHistory(){
@@ -1030,7 +1209,7 @@ function reviewPageCardHTML(t){
     <div class="task-main" onclick="expandReviewHist('${t.id}',event)">
       <div class="task-check ${rv.done?'checked':''}" onclick="tickReview('${t.id}',event)">${rv.done?'✓':''}</div>
       <div class="task-info">
-        <div class="task-name" style="${rv.done?'text-decoration:line-through;color:var(--text-3)':''}">${t.subject} · ${t.name}</div>
+        <div class="task-name" style="${rv.done?'text-decoration:line-through;color:var(--text-3)':''}">${t.name}</div>
         <div class="task-meta-row" style="margin-bottom:${totalWrong>0?'5px':'0'}">
           ${pill(t.subject)}<span class="task-date">${fmt(t.date)}</span>
           <span style="${agoStyle}">${ago.text}</span>
@@ -1044,8 +1223,10 @@ function reviewPageCardHTML(t){
         </div>`:''}
       </div>
       <div class="task-right">
+        ${(rv.totalSecs||(getReviewTS(t.id).elapsed>0?getReviewTS(t.id).elapsed:0))?`<span class="task-duration" style="background:var(--amber-bg);color:var(--amber)">📌 ${durFmt(rv.totalSecs||getReviewTS(t.id).elapsed)}</span>`:''}
         <span class="acc-badge ${pct>=90?'acc-good':pct>=70?'acc-ok':'acc-bad'}">${pct!==null?pct+'%':'—'}</span>
         ${rv.done?'<span class="review-tag rt-done">✓ Done</span>':'<span class="review-tag rt-needed">Pending</span>'}
+        ${rv.done&&rv.points?`<span class="pts-tag">+${rv.points}pts</span>`:''}
         <span class="chevron ${exp?'open':''}">▾</span>
       </div>
     </div>
@@ -1089,19 +1270,80 @@ function expandReview(id,e){
   renderContent();
 }
 
+let pendingReviewDoneId = null;
+
 function tickReview(id,e){
   e.stopPropagation();
   const task=TASKS.find(t=>t.id===id); if(!task||!task.review) return;
-  if(task.review.done){ undoReview(id); return; }
+  if(task.review.done){
+    playTickSound(false);
+    undoReview(id);
+    return;
+  }
+  // open review done modal
+  pendingReviewDoneId = id;
   const tst=getReviewTS(id);
+  const rvDoneTime = document.getElementById('rvDoneTimeDisplay');
+  const rvDoneEntry = document.getElementById('rvDoneTimeEntry');
+  const rvDoneSummary = document.getElementById('rvDoneTimeSummary');
+  const rvTotalWrong = document.getElementById('rv-done-total-wrong');
+  const rvCorrected = document.getElementById('rv-done-corrected');
+  // strictly read from this task's marking.wrongQ only
+  const wrongVal = (task.marking && task.marking.wrongQ && task.marking.wrongQ > 0) ? task.marking.wrongQ : null;
+  if(rvTotalWrong){ rvTotalWrong.value = wrongVal != null ? wrongVal : ''; }
+  if(rvCorrected){ rvCorrected.value = (task.review.reviewedCount > 0) ? task.review.reviewedCount : ''; }
+  if(tst.elapsed>0){
+    if(rvDoneTime) rvDoneTime.textContent = durFmt(tst.elapsed)||'—';
+    if(rvDoneSummary) rvDoneSummary.style.display='block';
+    if(rvDoneEntry) rvDoneEntry.style.display='none';
+  } else {
+    if(rvDoneSummary) rvDoneSummary.style.display='none';
+    if(rvDoneEntry) rvDoneEntry.style.display='block';
+    const rvM = document.getElementById('rv-done-m');
+    if(rvM) rvM.value='';
+  }
+  openModal('reviewDoneModal');
+}
+
+function confirmReviewDone(){
+  const task=TASKS.find(t=>t.id===pendingReviewDoneId); if(!task||!task.review) return;
+  const tst=getReviewTS(pendingReviewDoneId);
+  // get time
+  let totalSecs = tst.elapsed;
+  if(!totalSecs){
+    const m=parseInt(document.getElementById('rv-done-m')?.value)||0;
+    if(!m){ alert('Please enter review time.'); return; }
+    totalSecs = m*60;
+  }
+  // get corrected count
+  const corrected = parseInt(document.getElementById('rv-done-corrected')?.value)||0;
   clearInterval(tst.interval);
   const now=new Date().toLocaleTimeString('en-AU',{hour:'2-digit',minute:'2-digit'});
   tst.sessions.push({a:'Done',t:'Today '+now});
-  task.review.done=true; task.review.totalSecs=tst.elapsed; task.review.sessions=[...tst.sessions];
-  const notesEl=document.getElementById('rv2-notes-'+id)||document.getElementById('rv-notes-'+id)||document.getElementById('rvh-notes-'+id);
+  const rvPoints = parseInt(document.getElementById('rv-done-points')?.value)||0;
+  const rvNow=new Date().toLocaleTimeString('en-AU',{hour:'2-digit',minute:'2-digit'});
+  // accumulate time: timer elapsed OR manual minutes input
+  if(tst.elapsed>0){
+    task.review.totalSecs = (task.review.totalSecs||0) + tst.elapsed;
+    if(!task.review.sessions) task.review.sessions=[];
+    task.review.sessions.push({a:'Done',t:'Today '+rvNow});
+  } else if(totalSecs>0 && !task.review.totalSecs){
+    // manual time entered in modal
+    task.review.totalSecs = totalSecs;
+    if(!task.review.sessions) task.review.sessions=[];
+    task.review.sessions.push({a:'Manual',t:'Today '+rvNow+' · '+durFmt(totalSecs)});
+  }
+  task.review.done = true;
+  task.review.reviewedCount = corrected||task.review.reviewedCount||0;
+  task.review.doneDate = fmtISO(today);
+  task.review.points = rvPoints;
+  // save notes if open
+  const notesEl=document.getElementById('rv2-notes-'+pendingReviewDoneId)||
+    document.getElementById('rv-notes-'+pendingReviewDoneId)||
+    document.getElementById('rvh-notes-'+pendingReviewDoneId);
   if(notesEl) task.review.notes=notesEl.value||'';
-  const countEl=document.getElementById('rv2-rcount-'+id)||document.getElementById('rv-rcount-'+id)||document.getElementById('rvh-rcount-'+id);
-  if(countEl) task.review.reviewedCount=parseInt(countEl.value)||task.review.reviewedCount||0;
+  playTickSound(true);
+  closeModal('reviewDoneModal');
   renderContent();
 }
 
@@ -1119,7 +1361,10 @@ function markReviewDone(id,prefix){
 
 function undoReview(id){
   const task=TASKS.find(t=>t.id===id); if(!task||!task.review) return;
-  task.review.done=false; RVS[id]=null; renderContent();
+  task.review.done=false; task.review.doneDate=null; RVS[id]=null;
+  // if in Done Today view, switch to all so user can see it in Review Pending
+  if(currentView==='done') currentView='all';
+  renderContent();
 }
 
 function updateReviewProgress(id,prefix){
@@ -1130,17 +1375,68 @@ function updateReviewProgress(id,prefix){
 // ── REVIEW TIMER ──
 function reviewBtnRow(id,state){
   if(state==='idle')    return `<button class="tbtn tbtn-start"    style="font-size:11px;padding:5px 10px" onclick="rvStart('${id}')">▶ Start</button>`;
-  if(state==='running') return `<button class="tbtn tbtn-pause"    style="font-size:11px;padding:5px 10px" onclick="rvPause('${id}')">⏸ Pause</button><button class="tbtn tbtn-finish" style="font-size:11px;padding:5px 10px" onclick="rvFinish('${id}')">⏹ Stop</button>`;
+  if(state==='running') return `<button class="tbtn tbtn-pause" style="font-size:11px;padding:5px 10px" onclick="rvPause('${id}')">⏸ Pause</button><button class="tbtn tbtn-finish" style="font-size:11px;padding:5px 10px" onclick="rvFinish('${id}')">⏹ Stop</button>`;
   if(state==='paused')  return `<button class="tbtn tbtn-continue" style="font-size:11px;padding:5px 10px" onclick="rvContinue('${id}')">▶ Continue</button>`;
   if(state==='stopped') return `<button class="tbtn tbtn-continue" style="font-size:11px;padding:5px 10px" onclick="rvStart('${id}')">▶ Continue</button>`;
   return '';
 }
+function setReviewTimerMode(id, mode, prefix, btn){
+  reviewTimerMode[id]=mode;
+  RVS[id]=null; // reset timer
+  // re-render just the review sub
+  const task=TASKS.find(t=>t.id===id); if(!task) return;
+  const sub=document.getElementById('rsub-'+id);
+  if(sub) sub.outerHTML=reviewSubHTML(task,prefix);
+  else renderContent();
+}
+
+function setReviewCountdownTarget(id){
+  const m=parseInt(document.getElementById('rv-cd-m-'+id)?.value)||10;
+  reviewCountdownTarget[id]=m*60;
+}
+
+function quickReviewDone(id, prefix){
+  const m=parseInt(document.getElementById('rv-qm-'+id)?.value)||0;
+  if(!m){ alert('Please enter time in minutes.'); return; }
+  const task=TASKS.find(t=>t.id===id); if(!task||!task.review) return;
+  const now=new Date().toLocaleTimeString('en-AU',{hour:'2-digit',minute:'2-digit'});
+  // accumulate time across sessions
+  task.review.totalSecs = (task.review.totalSecs||0) + m*60;
+  if(!task.review.sessions) task.review.sessions=[];
+  task.review.sessions.push({a:'Session '+((task.review.sessions.length)+1),t:'Today '+now+' · '+m+'m'});
+  // save notes and reviewed count
+  const notesEl=document.getElementById(prefix+'-notes-'+id);
+  if(notesEl) task.review.notes=notesEl.value||'';
+  const countEl=document.getElementById(prefix+'-rcount-'+id);
+  if(countEl) task.review.reviewedCount=parseInt(countEl.value)||task.review.reviewedCount||0;
+  // show feedback but do NOT mark as done - tick does that
+  const qinput=document.getElementById('rv-qm-'+id);
+  if(qinput) qinput.value='';
+  renderContent();
+}
+
 function rvStart(id){
   const t=getReviewTS(id); if(t.state==='running') return;
+  const rmode=reviewTimerMode[id]||'stopwatch';
+  if(rmode==='countdown'&&!reviewCountdownTarget[id]) setReviewCountdownTarget(id);
   t.state='running'; t.sessionStart=Date.now()-t.elapsed*1000;
   const now=new Date().toLocaleTimeString('en-AU',{hour:'2-digit',minute:'2-digit'});
   t.sessions.push({a:'Start',t:'Today '+now});
-  t.interval=setInterval(()=>{ t.elapsed=Math.floor((Date.now()-t.sessionStart)/1000); rvTickUI(id,t); },500);
+  t.interval=setInterval(()=>{
+    t.elapsed=Math.floor((Date.now()-t.sessionStart)/1000);
+    const target=rmode==='countdown'?(reviewCountdownTarget[id]||600):
+                 rmode==='pomodoro'?POMO_FOCUS:0;
+    if(target>0&&t.elapsed>=target&&!t.alerted){
+      t.alerted=true;
+      playAlertSound();
+      const toast=document.createElement('div');
+      toast.style.cssText='position:fixed;top:20px;left:50%;transform:translateX(-50%);background:var(--text);color:white;padding:14px 24px;border-radius:12px;font-size:14px;font-weight:600;z-index:500;box-shadow:0 4px 20px rgba(0,0,0,0.3);text-align:center';
+      toast.textContent='⏰ Review time target reached!';
+      document.body.appendChild(toast);
+      setTimeout(()=>toast.remove(),4000);
+    }
+    rvTickUI(id,t);
+  },500);
   rvUpdateCtrl(id,t);
 }
 function rvPause(id){
@@ -1158,7 +1454,15 @@ function rvContinue(id){
 }
 function rvFinish(id){
   const t=getReviewTS(id); clearInterval(t.interval); t.state='stopped';
-  t.sessions.push({a:'Stop',t:'Today '+new Date().toLocaleTimeString('en-AU',{hour:'2-digit',minute:'2-digit'})});
+  const now=new Date().toLocaleTimeString('en-AU',{hour:'2-digit',minute:'2-digit'});
+  t.sessions.push({a:'Stop',t:'Today '+now});
+  // accumulate session time into review record
+  const task=TASKS.find(tk=>tk.id===id);
+  if(task&&task.review){
+    task.review.totalSecs=(task.review.totalSecs||0)+t.elapsed;
+    if(!task.review.sessions) task.review.sessions=[];
+    task.review.sessions.push({a:'Session '+(task.review.sessions.length+1),t:'Today '+now+' · '+durFmt(t.elapsed)});
+  }
   rvUpdateCtrl(id,t);
 }
 function rvTickUI(id,t){
@@ -1175,7 +1479,7 @@ function rvUpdateCtrl(id,t){
 // ── TASK TIMER ──
 function btnRow(id,state){
   if(state==='idle')    return `<button class="tbtn tbtn-start"    onclick="tStart('${id}')">▶ Start</button>`;
-  if(state==='running') return `<button class="tbtn tbtn-pause"    onclick="tPause('${id}')">⏸ Pause</button><button class="tbtn tbtn-finish" onclick="tFinish('${id}')">⏹ Finish</button>`;
+  if(state==='running') return `<button class="tbtn tbtn-pause" onclick="tPause('${id}')">⏸ Pause</button><button class="tbtn tbtn-finish" onclick="tFinish('${id}')">⏹ Stop</button>`;
   if(state==='paused')  return `<button class="tbtn tbtn-continue" onclick="tContinue('${id}')">▶ Continue</button>`;
   if(state==='stopped') return `<button class="tbtn tbtn-continue" onclick="tStart('${id}')">▶ Continue</button>`;
   return '';
@@ -1387,6 +1691,12 @@ function playTickSound(done){
     }
   } catch(e){}
 }
+function saveClassNotes(id){
+  const task=TASKS.find(t=>t.id===id); if(!task) return;
+  const el=document.getElementById('cls-notes-'+id);
+  if(el){ task.classNotes=el.value; renderContent(); }
+}
+
 function tickClass(id,e){
   e.stopPropagation();
   const task=TASKS.find(t=>t.id===id); if(!task) return;
@@ -1420,7 +1730,7 @@ function saveMarking(id){
   const wrong=parseInt(document.getElementById('mk-wrong-'+id)?.value)||null;
   const needRv=markingReview[id]==='yes';
   task.marking={totalQ:total,wrongQ:wrong,needReview:needRv,saved:true};
-  task.review=needRv?{done:false,notes:'',reviewedCount:0,totalWrong:wrong||0,sessions:[],totalSecs:0}:null;
+  task.review=needRv?{done:false,notes:'',reviewedCount:0,totalWrong:wrong,sessions:[],totalSecs:0}:null;
   renderContent();
 }
 function editMarking(id){
@@ -1515,6 +1825,9 @@ function addClass(){
   const endTime=document.getElementById('ac-end').value;
   const location=document.getElementById('ac-location').value.trim();
   const basePoints=parseInt(document.getElementById('ac-points').value)||0;
+  const pricePerLesson=parseFloat(document.getElementById('ac-price-per').value)||0;
+  const totalLessons=parseInt(document.getElementById('ac-total-lessons').value)||0;
+  const classNotes=document.getElementById('ac-class-notes').value.trim();
   const recur=acRecur||'none';
   if(recur!=='none'){
     let days=[];
@@ -1540,7 +1853,8 @@ function addClass(){
   document.getElementById('ac-oneoff-date').style.display='block';
   document.getElementById('ac-name').value=''; document.getElementById('ac-start').value='';
   document.getElementById('ac-end').value=''; document.getElementById('ac-location').value='';
-  document.getElementById('ac-points').value='';
+  document.getElementById('ac-points').value=''; document.getElementById('ac-price-per').value='';
+  document.getElementById('ac-total-lessons').value=''; document.getElementById('ac-class-notes').value='';
   renderContent();
 }
 
