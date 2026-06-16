@@ -2488,7 +2488,7 @@ async function createTaskInFeishu(task){
   const d = new Date(task.date);
   const days = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
   const fields = {
-    [FIELD_MAP.date]: fmtISO(d),
+    [FIELD_MAP.date]: d.getTime(),
     [FIELD_MAP.day]: days[d.getDay()],
     [FIELD_MAP.subject]: task.subject,
     [FIELD_MAP.details]: task.name,
