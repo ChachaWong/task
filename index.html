@@ -1514,11 +1514,23 @@ function renderRecurringList(){
       </div>
       ${isExp?`<div style="border-top:1px solid var(--border);margin-top:10px;padding-top:10px;display:flex;flex-direction:column;gap:12px">
         <div>
-          <div style="font-size:10px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:var(--text-3);margin-bottom:6px">Edit Date Range</div>
+          <div style="font-size:10px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:var(--text-3);margin-bottom:6px">Edit Rule</div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:8px">
+            <div style="display:flex;flex-direction:column;gap:3px"><span style="font-size:10px;color:var(--text-3)">Frequency</span>
+              <select id="ri-freq-${r.id}" style="padding:6px 8px;border:1px solid var(--border2);border-radius:6px;font-size:13px;font-family:'DM Sans',sans-serif">
+                <option value="daily" ${r.freq==='daily'?'selected':''}>Daily</option>
+                <option value="weekly" ${r.freq==='weekly'?'selected':''}>Weekly</option>
+                <option value="monthly" ${r.freq==='monthly'?'selected':''}>Monthly</option>
+              </select>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:3px"><span style="font-size:10px;color:var(--text-3)">Days (Mon,Tue,...)</span><input type="text" id="ri-days-${r.id}" value="${(r.days||[]).join(',')}" placeholder="e.g. Mon,Wed,Fri or 15" style="padding:6px 8px;border:1px solid var(--border2);border-radius:6px;font-size:13px;font-family:'DM Mono',monospace;width:160px"></div>
+            <div style="display:flex;flex-direction:column;gap:3px"><span style="font-size:10px;color:var(--text-3)">Estimate (min)</span><input type="number" id="ri-est-${r.id}" value="${r.estSecs?Math.round(r.estSecs/60):''}" placeholder="e.g. 15" style="padding:6px 8px;border:1px solid var(--border2);border-radius:6px;font-size:13px;font-family:'DM Mono',monospace;width:90px"></div>
+            <div style="display:flex;flex-direction:column;gap:3px"><span style="font-size:10px;color:var(--text-3)">Points</span><input type="number" id="ri-points-${r.id}" value="${r.basePoints||''}" placeholder="e.g. 5" style="padding:6px 8px;border:1px solid var(--border2);border-radius:6px;font-size:13px;font-family:'DM Mono',monospace;width:80px"></div>
+          </div>
           <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
             <div style="display:flex;flex-direction:column;gap:3px"><span style="font-size:10px;color:var(--text-3)">Start</span><input type="date" value="${r.startDate}" id="ri-start-${r.id}" style="padding:6px 8px;border:1px solid var(--border2);border-radius:6px;font-size:13px;font-family:'DM Mono',monospace"></div>
             <div style="display:flex;flex-direction:column;gap:3px"><span style="font-size:10px;color:var(--text-3)">End (optional)</span><input type="date" value="${r.endDate||''}" id="ri-end-${r.id}" style="padding:6px 8px;border:1px solid var(--border2);border-radius:6px;font-size:13px;font-family:'DM Mono',monospace"></div>
-            <button class="ri-btn" style="align-self:flex-end" onclick="saveRecurDates('${r.id}')">Save</button>
+            <button class="ri-btn" style="align-self:flex-end;background:var(--accent);color:white;border-color:var(--accent)" onclick="saveRecurFull('${r.id}')">💾 Save All Changes</button>
           </div>
         </div>
         <div>
@@ -1550,6 +1562,28 @@ function deleteRecurring(id){
   renderRecurringList();
 }
 function saveRecurDates(id){ const r=RECURRING.find(r=>r.id===id); if(!r) return; r.startDate=document.getElementById('ri-start-'+id).value||r.startDate; r.endDate=document.getElementById('ri-end-'+id).value||''; renderRecurringList(); }
+
+// 完整保存：Frequency, Days, Estimate, Points, Start/End Date，同步到飞书Recurring表
+function saveRecurFull(id){
+  const r=RECURRING.find(r=>r.id===id); if(!r) return;
+  const freqEl=document.getElementById('ri-freq-'+id);
+  const daysEl=document.getElementById('ri-days-'+id);
+  const estEl=document.getElementById('ri-est-'+id);
+  const ptsEl=document.getElementById('ri-points-'+id);
+  const startEl=document.getElementById('ri-start-'+id);
+  const endEl=document.getElementById('ri-end-'+id);
+
+  r.freq = freqEl.value;
+  r.days = daysEl.value.split(',').map(s=>s.trim()).filter(Boolean);
+  r.estSecs = estEl.value ? parseInt(estEl.value)*60 : null;
+  r.basePoints = ptsEl.value ? parseInt(ptsEl.value) : 0;
+  r.startDate = startEl.value || r.startDate;
+  r.endDate = endEl.value || '';
+
+  // 同步到飞书：更新这条规则记录(不新建)
+  feishuUpdateRecurringFull(r).then(()=>showSyncToast('✓ Rule updated in Feishu'));
+  renderRecurringList();
+}
 function addSkip(id){
   const r=RECURRING.find(r=>r.id===id); if(!r) return;
   const from=document.getElementById('ri-skip-from-'+id).value, to=document.getElementById('ri-skip-to-'+id).value;
@@ -1831,6 +1865,8 @@ async function feishuCreateRecurring(rule){
     'Status Changed At': Date.now(),
     'Status History': new Date().toLocaleDateString('en-AU') + ' Created',
   };
+  if(rule.estSecs)    fields['Estimate'] = Math.round(rule.estSecs/60);
+  if(rule.basePoints) fields['Reward Points'] = rule.basePoints;
   // remove nulls
   Object.keys(fields).forEach(k => fields[k]==null && delete fields[k]);
   const res = await apiCall('/recurring', 'POST', fields);
@@ -1848,6 +1884,21 @@ async function feishuUpdateRecurring(rule, newStatus){
     'Status Changed At': Date.now(),
     'Status History': (rule.statusHistory||'') + '\n' + now + ' ' + newStatus,
   };
+  return apiCall(`/recurring/${rule.feishuId}`, 'PATCH', fields);
+}
+
+// ── 6b. 完整编辑规则后同步飞书（Frequency/Days/Estimate/Points/Start/End）──
+async function feishuUpdateRecurringFull(rule){
+  if(!rule.feishuId) return;
+  const fields = {
+    'Frequency': rule.freq.charAt(0).toUpperCase() + rule.freq.slice(1),
+    'Recurring Days': rule.days,
+    'Recur Start': rule.startDate ? new Date(rule.startDate+'T00:00:00').getTime() : null,
+    'Recur End':   rule.endDate   ? new Date(rule.endDate+'T00:00:00').getTime()   : null,
+  };
+  if(rule.estSecs)    fields['Estimate'] = Math.round(rule.estSecs/60);
+  if(rule.basePoints) fields['Reward Points'] = rule.basePoints;
+  Object.keys(fields).forEach(k => fields[k]==null && delete fields[k]);
   return apiCall(`/recurring/${rule.feishuId}`, 'PATCH', fields);
 }
 
@@ -1992,7 +2043,9 @@ async function loadAllDataFromFeishu(){
     if(loadedTasks.length > 0 || loadedRecurring.length > 0){
       TASKS = loadedTasks;
       RECURRING = loadedRecurring;
-      generateRecurring();
+      // 注意：这里不再调用 generateRecurring()，因为今天该生成的recurring任务
+      // 应该已经由Worker的每日检查(Cron或手动触发/run-daily-check)写入飞书了。
+      // 如果在这里再跑一次，会因为飞书记录没有recurId导致重复生成。
       renderContent();
       console.log('Loaded from Feishu:', loadedTasks.length, 'tasks/classes,', loadedRecurring.length, 'recurring rules');
     }
