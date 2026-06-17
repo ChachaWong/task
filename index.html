@@ -2006,10 +2006,11 @@ async function feishuCreateTask(task){
 // statusLabel: 'In Processing' | 'Pause' | 'Stop' | 'Finish'
 // elapsedSecs: 可选，传则更新 Focus Time（分钟）
 async function feishuUpdateStatus(task, statusLabel, elapsedSecs){
-  if(!task.feishuId) return;   // 该任务未同步飞书，跳过
+  if(!task.feishuId) { console.log('feishuUpdateStatus skipped: no feishuId', task.name); return; }
   const fields = { [F_TASK.status]: statusLabel };
   if(elapsedSecs != null) fields[F_TASK.focusTime] = elapsedSecs;
   const res = await apiCall(`/tasks/${task.feishuId}`, 'PATCH', fields);
+  console.log('feishuUpdateStatus result:', JSON.stringify(res));
   return res;
 }
 
