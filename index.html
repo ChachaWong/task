@@ -223,6 +223,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
     <button class="abar-btn ghost"   onclick="openStats()">📊 Stats</button>
     <button class="abar-btn purple"  onclick="openPoints()">⭐ Points</button>
     <button class="abar-btn red"     onclick="openErrorBook()">📖 Error Book</button>
+    <button class="abar-btn" style="background:var(--red-bg);color:var(--red);border:1px solid #FECACA" onclick="setView('marking')">📝 Pending Marking <span id="abarMkBadge" style="display:none"></span></button>
   </div>
   <div class="stats-row">
     <div class="stat-card" id="sc-today"   onclick="setView('today')"><div class="stat-label">Today</div><div class="stat-value sv-blue" id="sTd">0</div><div class="stat-sub">tasks &amp; classes</div></div>
@@ -604,6 +605,7 @@ function renderContent(){
   const todayDone  = TASKS.filter(t=>fmtISO(t.date)===todayStr&&t.status==='done'&&!t.isStandaloneReview);
   const reviewPend = TASKS.filter(t=>t.marking&&t.marking.needReview&&t.review&&!t.review.done);
   const allReviews = TASKS.filter(t=>t.marking&&t.marking.needReview&&t.review);
+  const pendingMarking = TASKS.filter(t=>t.status==='done'&&t.type==='task'&&!t.isStandaloneReview&&(!t.marking||!t.marking.saved));
   const allDoneTasks2 = TASKS.filter(t=>t.status==='done'&&fmtISO(t.date)===todayStr&&!t.isStandaloneReview);
   const allDoneReviews2 = TASKS.filter(t=>t.review&&t.review.done&&t.review.doneDate===todayStr);
   const totalDoneCount = allDoneTasks2.length + allDoneReviews2.length;
@@ -612,6 +614,11 @@ function renderContent(){
   document.getElementById('sOv').textContent = overdue.length;
   document.getElementById('sDn').textContent = totalDoneCount;
   document.getElementById('sRv').textContent = reviewPend.length;
+  const mkBadge = document.getElementById('abarMkBadge');
+  if(mkBadge){
+    if(pendingMarking.length){ mkBadge.textContent = '('+pendingMarking.length+')'; mkBadge.style.display='inline'; }
+    else { mkBadge.style.display='none'; }
+  }
 
   const area = document.getElementById('contentArea');
 
@@ -684,6 +691,9 @@ function renderContent(){
       ${rvAllSubjects.map(s=>`<option value="${s}" ${rvDashSubjectFilter===s?'selected':''}>${s}</option>`).join('')}
     </select></div>`;
     area.innerHTML = `<div class="section"><div class="section-header"><div class="section-title">Review</div><span class="section-badge badge-amber">${rvPend.length+rvDone.length}</span></div>${filterBar}${[...rvPend,...rvDone].map(reviewCardHTML).join('')||emptyHTML('No reviews yet.')}</div>`;
+  } else if(currentView==='marking'){
+    const sorted = [...pendingMarking].sort((a,b)=>new Date(b.date)-new Date(a.date));
+    area.innerHTML = sectionHTML('Pending Marking', sorted.length, 'badge-red', sorted.map(taskHTML).join('')||emptyHTML('Nothing to mark.'));
   }
   reattach();
 }
@@ -718,7 +728,7 @@ function taskHTML(t){
   if(isDone){
     right+=`<span class="task-duration">${durFmt(t.totalSecs)||'—'}</span>`;
     if(t.marking&&t.marking.saved) right+=accBadge(pct);
-    else right+=`<span class="marking-tag">Pending marking</span>`;
+    else { right+=`<span class="marking-tag" style="background:var(--red-bg);color:var(--red)">⚠ Pending marking</span><button class="action-btn" style="padding:5px 10px;font-size:12px" onclick="quickMark('${t.id}',event)">⚡ Quick Mark</button>`; }
     if(t.basePoints) right+=`<span class="pts-tag">+${t.basePoints}pts</span>`;
   } else {
     const st=tst.state;
@@ -867,8 +877,8 @@ function expandedHTML(t){
         <div class="acc-live" id="mk-acc-${t.id}" style="color:${pctColor}">${pct!==null?pct+'%':'—'}</div>
         <div class="review-choice"><label>Need review?</label>
           <div class="review-btns">
-            <button class="rbtn ${mk.needReview===true?'sel-yes':''}" id="rb-yes-${t.id}" onclick="selReview('${t.id}','yes')" ${mk.saved?'disabled':''}>📌 Yes</button>
-            <button class="rbtn ${mk.needReview===false?'sel-no':''}" id="rb-no-${t.id}" onclick="selReview('${t.id}','no')" ${mk.saved?'disabled':''}>✓ No</button>
+            <button class="rbtn ${(mk.needReview===true||markingReview[t.id]==='yes')?'sel-yes':''}" id="rb-yes-${t.id}" onclick="selReview('${t.id}','yes')" ${mk.saved?'disabled':''}>📌 Yes</button>
+            <button class="rbtn ${(mk.needReview===false||markingReview[t.id]==='no')?'sel-no':''}" id="rb-no-${t.id}" onclick="selReview('${t.id}','no')" ${mk.saved?'disabled':''}>✓ No</button>
           </div>
         </div>
         ${timeCompare}
@@ -1386,6 +1396,16 @@ function expand(id,e){
 function expandAndStart(id,e){
   e.stopPropagation(); expandedId=id; renderContent();
   const tst=ts(id); if(tst.state==='idle'||tst.state==='stopped') tStart(id);
+}
+
+// ── Quick Mark: 不展开，不需要任何输入，直接标记完成且不需要review ──
+function quickMark(id,e){
+  e.stopPropagation();
+  const task=TASKS.find(t=>t.id===id); if(!task) return;
+  task.marking={totalQ:null,wrongQ:null,needReview:false,saved:true};
+  task.review=null;
+  feishuSaveMarking(task).then(()=>showSyncToast('✓ Quick marked'));
+  renderContent();
 }
 
 // ── DONE MODAL ──
@@ -2237,8 +2257,8 @@ function feishuRecordToTask(rec){
     date: dateVal,
     status: status,
     estSecs: f[F_TASK.estimate] ? f[F_TASK.estimate]*60 : null,
-    basePoints: f[F_TASK.points] || 0,
-    totalSecs: f[F_TASK.focusTime] || 0,
+    basePoints: Number(f[F_TASK.points]) || 0,
+    totalSecs: Number(f[F_TASK.focusTime]) || 0,
     marking: hasMarking ? {
       totalQ, wrongQ,
       needReview: !!f[F_TASK.needReview],
@@ -2272,12 +2292,12 @@ function feishuRecordToClass(rec){
     startTime: toTime(f['Start Time']),
     endTime: toTime(f['End Time']),
     location: '',
-    basePoints: f['Reward Points'] || 0,
-    totalSecs: f['Focus Time'] ? f['Focus Time']*60 : 0,  // Class表存的是分钟(上课时长)，这里转回秒方便页面显示
+    basePoints: Number(f['Reward Points']) || 0,
+    totalSecs: f['Focus Time'] ? Number(f['Focus Time'])*60 : 0,  // Class表存的是分钟(上课时长)，这里转回秒方便页面显示
     estSecs: null,
-    pricePerLesson: f['Price Per Lesson'] || 0,
-    packageTotal: f['Package Total'] || 0,
-    totalLessons: f['Total Lessons'] || 0,
+    pricePerLesson: Number(f['Price Per Lesson']) || 0,
+    packageTotal: Number(f['Package Total']) || 0,
+    totalLessons: Number(f['Total Lessons']) || 0,
     classNotes: f['Notes'] || '',
     sessions: [],
     marking: null,
