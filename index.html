@@ -592,16 +592,18 @@ function setView(view){
 }
 
 function renderContent(){
+  const todayStr = fmtISO(today);
   const overdue    = TASKS.filter(t=>t.status==='overdue'&&!t.isStandaloneReview);
-  const todayAll   = TASKS.filter(t=>fmtISO(t.date)===fmtISO(today)&&!t.isStandaloneReview);
-  const todayDone  = TASKS.filter(t=>fmtISO(t.date)===fmtISO(today)&&t.status==='done'&&!t.isStandaloneReview);
+  const todayAll   = TASKS.filter(t=>fmtISO(t.date)===todayStr&&!t.isStandaloneReview);
+  const todayPending = todayAll.filter(t=>t.status!=='done');
+  const todayDone  = TASKS.filter(t=>fmtISO(t.date)===todayStr&&t.status==='done'&&!t.isStandaloneReview);
   const reviewPend = TASKS.filter(t=>t.marking&&t.marking.needReview&&t.review&&!t.review.done);
   const allReviews = TASKS.filter(t=>t.marking&&t.marking.needReview&&t.review);
-  const allDoneTasks2 = TASKS.filter(t=>t.status==='done'&&!t.isStandaloneReview);
-  const allDoneReviews2 = TASKS.filter(t=>t.review&&t.review.done);
+  const allDoneTasks2 = TASKS.filter(t=>t.status==='done'&&fmtISO(t.date)===todayStr&&!t.isStandaloneReview);
+  const allDoneReviews2 = TASKS.filter(t=>t.review&&t.review.done&&t.review.doneDate===todayStr);
   const totalDoneCount = allDoneTasks2.length + allDoneReviews2.length;
 
-  document.getElementById('sTd').textContent = todayAll.length;
+  document.getElementById('sTd').textContent = todayPending.length;
   document.getElementById('sOv').textContent = overdue.length;
   document.getElementById('sDn').textContent = totalDoneCount;
   document.getElementById('sRv').textContent = reviewPend.length;
@@ -635,13 +637,14 @@ function renderContent(){
     const overdueDoneSort = [...overdueDone2].sort((a,b)=>a.subject.localeCompare(b.subject));
     area.innerHTML = sectionHTML('Overdue', [...overdueSort,...overdueDoneSort].length, 'badge-red', [...overdueSort,...overdueDoneSort].map(taskHTML).join('')||emptyHTML('No overdue tasks.'));
   } else if(currentView==='done'){
-    const allDoneTasks = TASKS.filter(t=>t.status==='done');
-    const allDoneReviews = TASKS.filter(t=>t.review&&t.review.done);
+    const todayStr = fmtISO(today);
+    const allDoneTasks = TASKS.filter(t=>t.status==='done'&&fmtISO(t.date)===todayStr&&!t.isStandaloneReview);
+    const allDoneReviews = TASKS.filter(t=>t.review&&t.review.done&&t.review.doneDate===todayStr);
     const allDoneCount = allDoneTasks.length + allDoneReviews.length;
     const doneSubjects = [...new Set([...allDoneTasks.map(t=>t.subject),...allDoneReviews.map(t=>t.subject)])].sort();
     let filteredTasks = [...allDoneTasks];
     let filteredReviews = [...allDoneReviews];
-    if(doneTypeFilter==='hw'){ filteredTasks=filteredTasks.filter(t=>t.type!=='class'); filteredReviews=[]; }
+    if(doneTypeFilter==='hw'){ filteredTasks=filteredTasks.filter(t=>t.type==='task'); filteredReviews=[]; }
     else if(doneTypeFilter==='class'){ filteredTasks=filteredTasks.filter(t=>t.type==='class'); filteredReviews=[]; }
     else if(doneTypeFilter==='review'){ filteredTasks=[]; }
     if(doneSubjectFilter){ filteredTasks=filteredTasks.filter(t=>t.subject===doneSubjectFilter); filteredReviews=filteredReviews.filter(t=>t.subject===doneSubjectFilter); }
@@ -957,14 +960,27 @@ function reviewSubHTML(t, prefix){
   </div>`;
 }
 
+let rvSubjectFilter = '';
 function openReviewHistory(){
   const all = TASKS.filter(t=>t.marking&&t.marking.needReview&&t.review);
+  rvSubjectFilter = '';
+  renderReviewHistoryPage();
+}
+function renderReviewHistoryPage(){
+  const allRaw = TASKS.filter(t=>t.marking&&t.marking.needReview&&t.review);
+  const subjects = [...new Set(allRaw.map(t=>t.subject))].sort();
+  const all = rvSubjectFilter ? allRaw.filter(t=>t.subject===rvSubjectFilter) : allRaw;
   const pending = [...all.filter(t=>!t.review.done)].sort((a,b)=>(accPct(a.marking.totalQ,a.marking.wrongQ)??100)-(accPct(b.marking.totalQ,b.marking.wrongQ)??100));
   const done    = [...all.filter(t=>t.review.done)].sort((a,b)=>new Date(b.date)-new Date(a.date));
-  let html = `<div style="margin-bottom:16px;display:flex;gap:6px">
+  const selectStyle = "padding:7px 12px;border:1px solid var(--border2);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;color:var(--text);background:white;cursor:pointer";
+  let html = `<div style="margin-bottom:12px;display:flex;gap:6px;flex-wrap:wrap;align-items:center">
     <button class="rv-filter-btn sel" onclick="setRvFilter('all',this)">All (${all.length})</button>
     <button class="rv-filter-btn" onclick="setRvFilter('pending',this)">Pending (${pending.length})</button>
     <button class="rv-filter-btn" onclick="setRvFilter('done',this)">Done (${done.length})</button>
+    <select onchange="setRvSubjectFilter(this.value)" style="${selectStyle}">
+      <option value="">All subjects</option>
+      ${subjects.map(s=>`<option value="${s}" ${rvSubjectFilter===s?'selected':''}>${s}</option>`).join('')}
+    </select>
   </div><div id="rvHistoryContent">`;
   if(!all.length){ html+='<div class="empty">No review records yet.</div>'; }
   else {
@@ -974,11 +990,16 @@ function openReviewHistory(){
   html+='</div>';
   showFullPage('📋 Review History', html);
 }
+function setRvSubjectFilter(s){
+  rvSubjectFilter = s;
+  renderReviewHistoryPage();
+}
 
 function setRvFilter(f, btn){
   document.querySelectorAll('.rv-filter-btn').forEach(b=>b.classList.remove('sel'));
   btn.classList.add('sel');
-  const all=TASKS.filter(t=>t.marking&&t.marking.needReview&&t.review);
+  const allRaw=TASKS.filter(t=>t.marking&&t.marking.needReview&&t.review);
+  const all = rvSubjectFilter ? allRaw.filter(t=>t.subject===rvSubjectFilter) : allRaw;
   const pending=[...all.filter(t=>!t.review.done)].sort((a,b)=>(accPct(a.marking.totalQ,a.marking.wrongQ)??100)-(accPct(b.marking.totalQ,b.marking.wrongQ)??100));
   const done=[...all.filter(t=>t.review.done)].sort((a,b)=>new Date(b.date)-new Date(a.date));
   const list=f==='pending'?pending:f==='done'?done:[...pending,...done];
