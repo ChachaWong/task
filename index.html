@@ -675,7 +675,7 @@ function taskHTML(t){
   } else {
     const st=tst.state;
     if(st==='idle')    right+=`<button class="action-btn primary" onclick="expandAndStart('${t.id}',event)">▶ Start</button>`;
-    if(st==='stopped') right+=`<button class="action-btn primary" onclick="expandAndStart('${t.id}',event)">▶ Continue</button>`;
+    if(st==='stopped') right+=`<span class="review-tag" style="background:var(--red-bg);color:var(--red)" onclick="expand('${t.id}',event)">⏹ Stopped</span>`;
     if(st==='running') right+=`<span class="review-tag" style="background:var(--accent-bg);color:var(--accent)">● Recording</span>`;
     if(st==='paused')  right+=`<span class="review-tag rt-needed">⏸ Paused</span>`;
     if(t.basePoints)   right+=`<span class="pts-tag">+${t.basePoints}pts</span>`;
@@ -845,7 +845,7 @@ function reviewCardHTML(t){
       <div class="task-right">
         ${(rv.totalSecs||(getReviewTS(t.id).elapsed>0?getReviewTS(t.id).elapsed:0))?`<span class="task-duration" style="background:var(--amber-bg);color:var(--amber)">📌 ${durFmt(rv.totalSecs||getReviewTS(t.id).elapsed)}</span>`:''}
         <span class="acc-badge ${pct>=90?'acc-good':pct>=70?'acc-ok':'acc-bad'}">${pct!==null?pct+'%':'—'}</span>
-        ${rv.done?'<span class="review-tag rt-done">✓ Done</span>':'<span class="review-tag rt-needed">Pending</span>'}
+        ${rv.done?'<span class="review-tag rt-done">✓ Done</span>':(getReviewTS(t.id).state!=='idle'?'<span class="review-tag" style="background:var(--accent-bg);color:var(--accent)">In Progress</span>':'<span class="review-tag rt-needed">Pending</span>')}
         ${rv.done&&rv.points?`<span class="pts-tag">+${rv.points}pts</span>`:''}
         <span class="chevron ${exp?'open':''}">▾</span>
       </div>
@@ -897,7 +897,7 @@ function reviewSubHTML(t, prefix){
         <svg viewBox="0 0 84 84"><circle class="c-track" cx="42" cy="42" r="34"/>
           <circle class="c-prog ${tst.state}" id="rv-ring-${t.id}" cx="42" cy="42" r="34" style="stroke-dashoffset:${214-Math.min(tst.elapsed/3600,1)*214}"/></svg>
         <div class="clock-center">
-          <div class="clock-time" id="rv-clk-${t.id}">${fmtSecs(tst.elapsed)}</div>
+          <div class="clock-time" id="rv-clk-${t.id}">${rmode==='countdown'?fmtReviewCountdown(t.id):fmtSecs(tst.elapsed)}</div>
           <div class="clock-lbl" id="rv-clklbl-${t.id}">${tst.state==='running'?'focus':tst.state}</div>
         </div>
       </div>
@@ -968,7 +968,7 @@ function reviewPageCardHTML(t){
       <div class="task-right">
         ${(rv.totalSecs||(getReviewTS(t.id).elapsed>0?getReviewTS(t.id).elapsed:0))?`<span class="task-duration" style="background:var(--amber-bg);color:var(--amber)">📌 ${durFmt(rv.totalSecs||getReviewTS(t.id).elapsed)}</span>`:''}
         <span class="acc-badge ${pct>=90?'acc-good':pct>=70?'acc-ok':'acc-bad'}">${pct!==null?pct+'%':'—'}</span>
-        ${rv.done?'<span class="review-tag rt-done">✓ Done</span>':'<span class="review-tag rt-needed">Pending</span>'}
+        ${rv.done?'<span class="review-tag rt-done">✓ Done</span>':(getReviewTS(t.id).state!=='idle'?'<span class="review-tag" style="background:var(--accent-bg);color:var(--accent)">In Progress</span>':'<span class="review-tag rt-needed">Pending</span>')}
         ${rv.done&&rv.points?`<span class="pts-tag">+${rv.points}pts</span>`:''}
         <span class="chevron ${exp?'open':''}">▾</span>
       </div>
@@ -1150,9 +1150,18 @@ function rvFinish(id){
   }
   rvUpdateCtrl(id,t);
 }
+function fmtReviewCountdown(id){
+  const tst=getReviewTS(id), mode=reviewTimerMode[id]||'stopwatch';
+  if(mode!=='countdown') return fmtSecs(tst.elapsed);
+  const target=reviewCountdownTarget[id]||600;
+  const remaining=Math.max(target-tst.elapsed,0);
+  if(tst.elapsed>=target) return '+'+fmtSecs(tst.elapsed-target);
+  return fmtSecs(remaining);
+}
 function rvTickUI(id,t){
   const clk=document.getElementById('rv-clk-'+id), ring=document.getElementById('rv-ring-'+id);
-  if(clk) clk.textContent=fmtSecs(t.elapsed);
+  const rmode=reviewTimerMode[id]||'stopwatch';
+  if(clk) clk.textContent = rmode==='countdown' ? fmtReviewCountdown(id) : fmtSecs(t.elapsed);
   if(ring){ ring.style.strokeDashoffset=214-Math.min(t.elapsed/3600,1)*214; ring.className='c-prog '+t.state; }
 }
 function rvUpdateCtrl(id,t){ const br=document.getElementById('rv-btnrow-'+id); if(br) br.innerHTML=reviewBtnRow(id,t.state); }
