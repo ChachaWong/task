@@ -1493,7 +1493,9 @@ function undoTask(id){
   const dateOnly = new Date(task.date); dateOnly.setHours(0,0,0,0);
   task.status = dateOnly < today ? 'overdue' : 'pending';
   task.totalSecs=0; task.sessions=[]; task.marking=null; task.review=null;
-  TS[id]=null; expandedId=null; renderContent();
+  TS[id]=null; expandedId=null;
+  feishuUpdateStatus(task, 'Not Start', 0).then(()=>showSyncToast('✓ Reverted to pending'));
+  renderContent();
 }
 function saveClassDetails(id){
   const task=TASKS.find(t=>t.id===id); if(!task) return;
