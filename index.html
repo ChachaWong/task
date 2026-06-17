@@ -731,10 +731,10 @@ function classCardHTML(t){
   const timeStr=t.startTime&&t.endTime?`${fmtTime(t.startTime)}–${fmtTime(t.endTime)}`:'';
   const exp = expandedId===t.id;
   let priceStr = '';
-  if(t.packageTotal&&t.totalLessons){ const perL=Math.round(t.packageTotal/t.totalLessons*10)/10; priceStr=`$${t.packageTotal.toFixed(1)} package · ${t.totalLessons} lessons ($${perL.toFixed(1)}/lesson)`; }
-  else if(t.packageTotal){ priceStr=`$${t.packageTotal.toFixed(1)} package`; }
-  else if(t.pricePerLesson&&t.totalLessons){ const total=Math.round(t.pricePerLesson*t.totalLessons*10)/10; priceStr=`$${t.pricePerLesson.toFixed(1)}/lesson · ${t.totalLessons} lessons · total $${total.toFixed(1)}`; }
-  else if(t.pricePerLesson){ priceStr=`$${t.pricePerLesson.toFixed(1)}/lesson`; }
+  if(t.packageTotal&&t.totalLessons){ const pkg=Number(t.packageTotal), lessons=Number(t.totalLessons); const perL=Math.round(pkg/lessons*10)/10; priceStr=`$${pkg.toFixed(1)} package · ${lessons} lessons ($${perL.toFixed(1)}/lesson)`; }
+  else if(t.packageTotal){ priceStr=`$${Number(t.packageTotal).toFixed(1)} package`; }
+  else if(t.pricePerLesson&&t.totalLessons){ const perL=Number(t.pricePerLesson), lessons=Number(t.totalLessons); const total=Math.round(perL*lessons*10)/10; priceStr=`$${perL.toFixed(1)}/lesson · ${lessons} lessons · total $${total.toFixed(1)}`; }
+  else if(t.pricePerLesson){ priceStr=`$${Number(t.pricePerLesson).toFixed(1)}/lesson`; }
   return `<div class="task-card class-card ${isDone?'done':''}${exp?' active':''}" id="card-${t.id}">
     <div class="task-main" onclick="expand('${t.id}',event)">
       <div class="task-check ${isDone?'checked':''}" onclick="tickClass('${t.id}',event)">${isDone?'✓':''}</div>
