@@ -1432,7 +1432,13 @@ function addTask(){
     const recurTask=TASKS.find(t=>t.recurId===newRecur.id);
     if(recurTask) feishuCreateTask(recurTask).then(()=>showSyncToast('✓ Saved to Feishu'));
   } else {
-    const newTask={id:'T'+String(taskIdCounter++).padStart(3,'0'),type:'task',name:details,subject:atSubject,date:new Date(dateVal+'T00:00:00'),status:'pending',estSecs,basePoints,totalSecs:0,marking:null,sessions:[],review:null,recurId:null,feishuId:null};
+    const isPastDate = dateVal < fmtISO(today);
+    let initialStatus = 'pending';
+    if(isPastDate){
+      const wasCompleted = confirm('This is a past date. Was this task already completed?\n\nOK = Yes, completed\nCancel = No, still pending (will show in Overdue)');
+      initialStatus = wasCompleted ? 'done' : 'pending';
+    }
+    const newTask={id:'T'+String(taskIdCounter++).padStart(3,'0'),type:'task',name:details,subject:atSubject,date:new Date(dateVal+'T00:00:00'),status:initialStatus,estSecs,basePoints,totalSecs:0,marking:null,sessions:[],review:null,recurId:null,feishuId:null};
     TASKS.push(newTask);
     feishuCreateTask(newTask).then(()=>showSyncToast('✓ Saved to Feishu'));
   }
@@ -1473,7 +1479,13 @@ function addClass(){
     if(recurTask) feishuCreateClass(recurTask).then(()=>showSyncToast('✓ Saved to Feishu'));
   } else {
     const dateVal=document.getElementById('ac-date').value; if(!dateVal){ alert('Please select a date.'); return; }
-    const newTask={id:'T'+String(taskIdCounter++).padStart(3,'0'),type:'class',name,subject:type,startTime,endTime,location,date:new Date(dateVal+'T00:00:00'),status:'pending',recurId:null,basePoints,sessions:[],marking:null,review:null,totalSecs:0,estSecs:null,pricePerLesson,packageTotal,totalLessons,classNotes,feishuId:null};
+    const isPastDate = dateVal < fmtISO(today);
+    let initialStatus = 'pending';
+    if(isPastDate){
+      const wasAttended = confirm('This is a past date. Was this class already attended?\n\nOK = Yes, attended\nCancel = No, still pending');
+      initialStatus = wasAttended ? 'done' : 'pending';
+    }
+    const newTask={id:'T'+String(taskIdCounter++).padStart(3,'0'),type:'class',name,subject:type,startTime,endTime,location,date:new Date(dateVal+'T00:00:00'),status:initialStatus,recurId:null,basePoints,sessions:[],marking:null,review:null,totalSecs:0,estSecs:null,pricePerLesson,packageTotal,totalLessons,classNotes,feishuId:null};
     TASKS.push(newTask);
     feishuCreateClass(newTask).then(()=>showSyncToast('✓ Saved to Feishu'));
   }
@@ -1768,7 +1780,7 @@ async function feishuCreateTask(task){
     [F_TASK.day]:       days[d.getDay()],
     [F_TASK.subject]:   task.subject,
     [F_TASK.details]:   task.name,
-    [F_TASK.status]:    'Not Start',
+    [F_TASK.status]:    task.status === 'done' ? 'Finish' : 'Not Start',
     [F_TASK.recurring]: task.recurId ? true : false,
   };
   if(task.estSecs)    fields[F_TASK.estimate] = Math.round(task.estSecs / 60);
@@ -1833,7 +1845,7 @@ async function feishuCreateClass(task){
     'Day':             days[d.getDay()],
     'Subject':         task.subject,
     'Task Details':    task.name,
-    'Status':          'Not Start',
+    'Status':          task.status === 'done' ? 'Attended' : 'Not Start',
     'Recurring':       task.recurId ? true : false,
   };
   if(startTs)        fields['Start Time']      = startTs;
