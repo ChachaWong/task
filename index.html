@@ -45,9 +45,8 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
 .stat-card.active-red{border-color:var(--red);background:linear-gradient(135deg,var(--red-bg),#fff);}
 .stat-card.active-green{border-color:var(--green);background:linear-gradient(135deg,var(--green-bg),#fff);}
 .stat-card.active-amber{border-color:var(--amber);background:linear-gradient(135deg,var(--amber-bg),#fff);}
-.stat-label{font-size:11px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;color:var(--text-3);margin-bottom:6px;}
-.stat-value{font-size:28px;font-weight:700;font-family:'DM Mono',monospace;line-height:1;}
-.stat-sub{font-size:12px;color:var(--text-3);margin-top:4px;}
+.stat-label{font-size:14px;font-weight:700;letter-spacing:0.04em;text-transform:uppercase;color:var(--text-3);margin-bottom:8px;}
+.stat-value{font-size:40px;font-weight:700;font-family:'DM Mono',monospace;line-height:1;}
 .sv-blue{color:var(--accent);}.sv-green{color:var(--green);}.sv-amber{color:var(--amber);}.sv-red{color:var(--red);}
 .section{margin-bottom:20px;}
 .section-header{display:flex;align-items:center;margin-bottom:10px;gap:8px;}
@@ -201,7 +200,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
 .section-empty{padding:16px;text-align:center;color:var(--text-3);font-size:12px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);}
 @media(max-width:600px){
   .action-bar{gap:6px;}.abar-btn{padding:7px 10px;font-size:11px;}.abar-divider{display:none;}
-  .main{padding:12px 10px;}.stats-row{grid-template-columns:repeat(2,1fr);gap:8px;}.stat-value{font-size:20px;}
+  .main{padding:12px 10px;}.stats-row{grid-template-columns:repeat(2,1fr);gap:8px;}.stat-value{font-size:30px;}
   .task-main{padding:10px 12px;gap:8px;}.task-name{font-size:13px;}.task-right{gap:5px;flex-wrap:wrap;justify-content:flex-end;}
   .acc-badge{font-size:10px;padding:2px 5px;}.review-tag{font-size:9px;padding:2px 5px;}.action-btn{padding:5px 10px;font-size:11px;}.est-tag{display:none;}
   .timer-panel{flex-direction:column;align-items:flex-start;gap:14px;padding:14px 12px;}.qdivider{display:none;}.quick-area{width:100%;}.quick-inputs{flex-wrap:wrap;}
@@ -226,10 +225,10 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
     <button class="abar-btn" style="background:var(--red-bg);color:var(--red);border:1px solid #FECACA" onclick="setView('marking')">📝 Pending Marking <span id="abarMkBadge" style="display:none"></span></button>
   </div>
   <div class="stats-row">
-    <div class="stat-card" id="sc-today"   onclick="setView('today')"><div class="stat-label">Today</div><div class="stat-value sv-blue" id="sTd">0</div><div class="stat-sub">tasks &amp; classes</div></div>
-    <div class="stat-card" id="sc-overdue"  onclick="setView('overdue')"><div class="stat-label">Overdue</div><div class="stat-value sv-red" id="sOv">0</div><div class="stat-sub">need attention</div></div>
-    <div class="stat-card" id="sc-done"     onclick="setView('done')"><div class="stat-label">Done Today</div><div class="stat-value sv-green" id="sDn">0</div><div class="stat-sub">completed</div></div>
-    <div class="stat-card" id="sc-review"   onclick="setView('review')"><div class="stat-label">Review Pending</div><div class="stat-value sv-amber" id="sRv">0</div><div class="stat-sub">to review</div></div>
+    <div class="stat-card" id="sc-today"   onclick="setView('today')"><div class="stat-label">Today</div><div class="stat-value sv-blue" id="sTd">0</div></div>
+    <div class="stat-card" id="sc-overdue"  onclick="setView('overdue')"><div class="stat-label">Overdue</div><div class="stat-value sv-red" id="sOv">0</div></div>
+    <div class="stat-card" id="sc-done"     onclick="setView('done')"><div class="stat-label">Done Today</div><div class="stat-value sv-green" id="sDn">0</div></div>
+    <div class="stat-card" id="sc-review"   onclick="setView('review')"><div class="stat-label">Review</div><div class="stat-value sv-amber" id="sRv">0</div></div>
   </div>
   <div id="contentArea"></div>
 </div>
@@ -508,7 +507,7 @@ let TASKS = [
    estSecs:1800,basePoints:10,totalSecs:1240,
    marking:{totalQ:10,wrongQ:4,needReview:true,saved:true},
    sessions:[{a:'Start',t:'Mon 15:00'},{a:'Finish',t:'Mon 15:40'},{a:'Done',t:'Mon 15:41'}],
-   review:{done:false,notes:'',reviewedCount:0,totalWrong:4,sessions:[],totalSecs:0},recurId:null,feishuId:null},
+   review:{done:false,notes:'',reviewedCount:0,totalWrong:4,sessions:[],totalSecs:0,date:dAgo(1)},recurId:null,feishuId:null},
   {id:'T003',type:'task',name:'Chinese Writing Practice',subject:'Writing',date:today,status:'pending',
    estSecs:2700,basePoints:10,totalSecs:0,marking:null,sessions:[],review:null,recurId:null,feishuId:null},
   {id:'T006',type:'task',name:'Spelling List 12',subject:'Reading',date:today,status:'done',
@@ -608,15 +607,17 @@ function renderContent(){
   const todayAll   = TASKS.filter(t=>fmtISO(t.date)===todayStr&&!isHidden(t));
   const todayPending = todayAll.filter(t=>t.status!=='done');
   const todayDone  = TASKS.filter(t=>fmtISO(t.date)===todayStr&&t.status==='done'&&!isHidden(t));
-  const reviewPend = TASKS.filter(t=>t.marking&&t.marking.needReview&&t.review&&!t.review.done);
-  const allReviews = TASKS.filter(t=>t.marking&&t.marking.needReview&&t.review);
+  const reviewPend = TASKS.filter(t=>t.review&&!t.review.done&&fmtISO(t.review.date)<=todayStr);
+  const reviewOverdue = reviewPend.filter(t=>fmtISO(t.review.date)<todayStr);
+  const reviewToday = reviewPend.filter(t=>fmtISO(t.review.date)===todayStr);
+  const allReviews = TASKS.filter(t=>t.review);
   const pendingMarking = TASKS.filter(t=>t.status==='done'&&t.type==='task'&&!isHidden(t)&&(!t.marking||!t.marking.saved));
-  const allDoneTasks2 = TASKS.filter(t=>t.status==='done'&&fmtISO(t.date)===todayStr&&!isHidden(t));
-  const allDoneReviews2 = TASKS.filter(t=>t.review&&t.review.done&&t.review.doneDate===todayStr);
+  const allDoneTasks2 = TASKS.filter(t=>t.completedAt&&fmtISO(new Date(t.completedAt))===todayStr&&!isHidden(t));
+  const allDoneReviews2 = TASKS.filter(t=>t.review&&t.review.completedAt&&fmtISO(new Date(t.review.completedAt))===todayStr);
   const totalDoneCount = allDoneTasks2.length + allDoneReviews2.length;
 
   document.getElementById('sTd').textContent = todayPending.length;
-  document.getElementById('sOv').textContent = overdue.length;
+  document.getElementById('sOv').textContent = overdue.length + reviewOverdue.length;
   document.getElementById('sDn').textContent = totalDoneCount;
   document.getElementById('sRv').textContent = reviewPend.length;
   const mkBadge = document.getElementById('abarMkBadge');
@@ -649,15 +650,16 @@ function renderContent(){
     const done    = [...todayAll.filter(t=>t.status==='done')].sort((a,b)=>a.subject.localeCompare(b.subject));
     area.innerHTML = sectionHTML('Today', todayAll.length, '', [...pending,...done].map(taskHTML).join('')||emptyHTML('No tasks today.'));
   } else if(currentView==='overdue'){
-    const overdueDone2 = TASKS.filter(t=>t.status==='done' && new Date(t.date)<today && fmtISO(t.date)!==fmtISO(today));
     const overdueSort = [...overdue].sort((a,b)=>a.subject.localeCompare(b.subject));
-    const overdueDoneSort = [...overdueDone2].sort((a,b)=>a.subject.localeCompare(b.subject));
-    area.innerHTML = sectionHTML('Overdue', [...overdueSort,...overdueDoneSort].length, 'badge-red', [...overdueSort,...overdueDoneSort].map(taskHTML).join('')||emptyHTML('No overdue tasks.'));
+    const reviewOverdueSort = [...reviewOverdue].sort((a,b)=>new Date(a.review.date)-new Date(b.review.date));
+    const combinedCount = overdueSort.length + reviewOverdueSort.length;
+    const content = overdueSort.map(taskHTML).join('') + reviewOverdueSort.map(reviewCardHTML).join('');
+    area.innerHTML = sectionHTML('Overdue', combinedCount, 'badge-red', content||emptyHTML('No overdue tasks.'));
   } else if(currentView==='done'){
     const todayStr = fmtISO(today);
-    const allDoneTasks = TASKS.filter(t=>t.status==='done'&&fmtISO(t.date)===todayStr&&!isHidden(t));
+    const allDoneTasks = TASKS.filter(t=>t.completedAt&&fmtISO(new Date(t.completedAt))===todayStr&&!isHidden(t));
     // Review单独算: 只统计review本身完成的，不管task是否也done(避免与allDoneTasks重复)
-    const allDoneReviews = TASKS.filter(t=>t.review&&t.review.done&&t.review.doneDate===todayStr);
+    const allDoneReviews = TASKS.filter(t=>t.review&&t.review.completedAt&&fmtISO(new Date(t.review.completedAt))===todayStr);
     // 用Set去重: 一条记录如果task和review都算done,只算一次到总数,但在列表里分别用不同卡片展示(task卡片 + review卡片)是合理的,因为它们代表两件不同的事(完成作业 vs 完成复习)
     const doneSubjects = [...new Set([...allDoneTasks.map(t=>t.subject),...allDoneReviews.map(t=>t.subject)])].sort();
     let filteredTasks = [...allDoneTasks];
@@ -688,14 +690,20 @@ function renderContent(){
   } else if(currentView==='review'){
     const rvAllSubjects = [...new Set(allReviews.map(t=>t.subject))].sort();
     const rvFiltered = rvDashSubjectFilter ? allReviews.filter(t=>t.subject===rvDashSubjectFilter) : allReviews;
-    const rvPend = [...rvFiltered.filter(t=>!t.review.done)].sort((a,b)=>(accPct(a.marking.totalQ,a.marking.wrongQ)??100)-(accPct(b.marking.totalQ,b.marking.wrongQ)??100));
-    const rvDone = rvFiltered.filter(t=>t.review.done);
+    const rvOverdueList = [...rvFiltered.filter(t=>!t.review.done&&fmtISO(t.review.date)<todayStr)].sort((a,b)=>new Date(a.review.date)-new Date(b.review.date));
+    const rvTodayList = [...rvFiltered.filter(t=>!t.review.done&&fmtISO(t.review.date)===todayStr)].sort((a,b)=>a.subject.localeCompare(b.subject));
+    const rvDoneTodayList = rvFiltered.filter(t=>t.review.done&&t.review.completedAt&&fmtISO(new Date(t.review.completedAt))===todayStr);
+    const totalCount = rvOverdueList.length + rvTodayList.length;
     const selectStyle = "padding:7px 12px;border:1px solid var(--border2);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;color:var(--text);background:white;cursor:pointer";
     const filterBar = `<div style="margin-bottom:14px"><select onchange="setRvDashSubjectFilter(this.value)" style="${selectStyle}">
       <option value="">All subjects</option>
       ${rvAllSubjects.map(s=>`<option value="${s}" ${rvDashSubjectFilter===s?'selected':''}>${s}</option>`).join('')}
     </select></div>`;
-    area.innerHTML = `<div class="section"><div class="section-header"><div class="section-title">Review</div><span class="section-badge badge-amber">${rvPend.length+rvDone.length}</span></div>${filterBar}${[...rvPend,...rvDone].map(reviewCardHTML).join('')||emptyHTML('No reviews yet.')}</div>`;
+    let groups = '';
+    if(rvOverdueList.length) groups += `<div class="rv-group-title">Overdue · ${rvOverdueList.length}</div>${rvOverdueList.map(reviewCardHTML).join('')}`;
+    if(rvTodayList.length) groups += `<div class="rv-group-title">Today · ${rvTodayList.length}</div>${rvTodayList.map(reviewCardHTML).join('')}`;
+    if(rvDoneTodayList.length) groups += `<div class="rv-group-title">Done Today · ${rvDoneTodayList.length}</div>${rvDoneTodayList.map(reviewCardHTML).join('')}`;
+    area.innerHTML = `<div class="section"><div class="section-header"><div class="section-title">Review</div><span class="section-badge badge-amber">${totalCount}</span></div>${filterBar}${groups||emptyHTML('No reviews yet.')}</div>`;
   } else if(currentView==='marking'){
     const sorted = [...pendingMarking].sort((a,b)=>new Date(b.date)-new Date(a.date));
     area.innerHTML = sectionHTML('Pending Marking', sorted.length, 'badge-red', sorted.map(taskHTML).join('')||emptyHTML('Nothing to mark.'));
@@ -744,7 +752,9 @@ function taskHTML(t){
     if(t.basePoints)   right+=`<span class="pts-tag">+${t.basePoints}pts</span>`;
   }
   right+=`<span class="chevron ${exp?'open':''}">▾</span>`;
-  const meta = `${pill(t.subject)}<span class="task-date">${fmt(t.date)}</span>${isOverdue?'<span class="overdue-tag">Overdue</span>':''}${t.estSecs?`<span class="est-tag">est. ${durFmt(t.estSecs)}</span>`:''}`;
+  const overdueAgo = isOverdue ? daysAgoLabel(t.date) : null;
+  const overdueAgoStyle = overdueAgo ? `font-size:10px;font-weight:600;padding:2px 6px;border-radius:4px;background:${overdueAgo.cls==='urgent'?'var(--red-bg)':'var(--amber-bg)'};color:${overdueAgo.cls==='urgent'?'var(--red)':'var(--amber)'}` : '';
+  const meta = `${pill(t.subject)}<span class="task-date">${fmt(t.date)}</span>${isOverdue?`<span style="${overdueAgoStyle}">${overdueAgo.text}</span>`:''}${t.estSecs?`<span class="est-tag">est. ${durFmt(t.estSecs)}</span>`:''}`;
   return `<div class="${cardCls}" id="card-${t.id}">
     <div class="task-main" onclick="expand('${t.id}',event)">
       <div class="task-check ${isDone?'checked':''}" onclick="tickTask('${t.id}',event)">${isDone?'✓':''}</div>
@@ -917,8 +927,8 @@ function reviewCardHTML(t){
       </div>
       <div class="task-right">
         ${(rv.totalSecs||(getReviewTS(t.id).elapsed>0?getReviewTS(t.id).elapsed:0))?`<span class="task-duration" style="background:var(--amber-bg);color:var(--amber)">📌 ${durFmt(rv.totalSecs||getReviewTS(t.id).elapsed)}</span>`:''}
+        ${rv.done?'<span class="review-tag rt-done">✓ Done</span>':(()=>{ const rst=getReviewTS(t.id).state; if(rst==='running') return '<span class="review-tag" style="background:var(--accent-bg);color:var(--accent)">● Recording</span>'; if(rst==='paused') return '<span class="review-tag rt-needed">⏸ Paused</span>'; if(rst==='stopped') return '<span class="review-tag" style="background:var(--red-bg);color:var(--red)">⏹ Stopped</span>'; return `<button class="action-btn primary" onclick="expandReviewAndStart('${t.id}',event)">▶ Start</button>`; })()}
         <span class="acc-badge ${pct>=90?'acc-good':pct>=70?'acc-ok':'acc-bad'}">${pct!==null?pct+'%':'—'}</span>
-        ${rv.done?'<span class="review-tag rt-done">✓ Done</span>':(()=>{ const rst=getReviewTS(t.id).state; if(rst==='running') return '<span class="review-tag" style="background:var(--accent-bg);color:var(--accent)">● Recording</span>'; if(rst==='paused') return '<span class="review-tag rt-needed">⏸ Paused</span>'; if(rst==='stopped') return '<span class="review-tag" style="background:var(--red-bg);color:var(--red)">⏹ Stopped</span>'; return '<span class="review-tag rt-needed">Pending</span>'; })()}
         ${rv.done&&rv.points?`<span class="pts-tag">+${rv.points}pts</span>`:''}
         <span class="chevron ${exp?'open':''}">▾</span>
       </div>
@@ -995,12 +1005,12 @@ function reviewSubHTML(t, prefix){
 
 let rvSubjectFilter = '';
 function openReviewHistory(){
-  const all = TASKS.filter(t=>t.marking&&t.marking.needReview&&t.review);
+  const all = TASKS.filter(t=>t.review);
   rvSubjectFilter = '';
   renderReviewHistoryPage();
 }
 function renderReviewHistoryPage(){
-  const allRaw = TASKS.filter(t=>t.marking&&t.marking.needReview&&t.review);
+  const allRaw = TASKS.filter(t=>t.review);
   const subjects = [...new Set(allRaw.map(t=>t.subject))].sort();
   const all = rvSubjectFilter ? allRaw.filter(t=>t.subject===rvSubjectFilter) : allRaw;
   const pending = [...all.filter(t=>!t.review.done)].sort((a,b)=>(accPct(a.marking.totalQ,a.marking.wrongQ)??100)-(accPct(b.marking.totalQ,b.marking.wrongQ)??100));
@@ -1031,7 +1041,7 @@ function setRvSubjectFilter(s){
 function setRvFilter(f, btn){
   document.querySelectorAll('.rv-filter-btn').forEach(b=>b.classList.remove('sel'));
   btn.classList.add('sel');
-  const allRaw=TASKS.filter(t=>t.marking&&t.marking.needReview&&t.review);
+  const allRaw=TASKS.filter(t=>t.review);
   const all = rvSubjectFilter ? allRaw.filter(t=>t.subject===rvSubjectFilter) : allRaw;
   const pending=[...all.filter(t=>!t.review.done)].sort((a,b)=>(accPct(a.marking.totalQ,a.marking.wrongQ)??100)-(accPct(b.marking.totalQ,b.marking.wrongQ)??100));
   const done=[...all.filter(t=>t.review.done)].sort((a,b)=>new Date(b.date)-new Date(a.date));
@@ -1059,8 +1069,8 @@ function reviewPageCardHTML(t){
       </div>
       <div class="task-right">
         ${(rv.totalSecs||(getReviewTS(t.id).elapsed>0?getReviewTS(t.id).elapsed:0))?`<span class="task-duration" style="background:var(--amber-bg);color:var(--amber)">📌 ${durFmt(rv.totalSecs||getReviewTS(t.id).elapsed)}</span>`:''}
+        ${rv.done?'<span class="review-tag rt-done">✓ Done</span>':(()=>{ const rst=getReviewTS(t.id).state; if(rst==='running') return '<span class="review-tag" style="background:var(--accent-bg);color:var(--accent)">● Recording</span>'; if(rst==='paused') return '<span class="review-tag rt-needed">⏸ Paused</span>'; if(rst==='stopped') return '<span class="review-tag" style="background:var(--red-bg);color:var(--red)">⏹ Stopped</span>'; return `<button class="action-btn primary" onclick="expandReviewHistAndStart('${t.id}',event)">▶ Start</button>`; })()}
         <span class="acc-badge ${pct>=90?'acc-good':pct>=70?'acc-ok':'acc-bad'}">${pct!==null?pct+'%':'—'}</span>
-        ${rv.done?'<span class="review-tag rt-done">✓ Done</span>':(()=>{ const rst=getReviewTS(t.id).state; if(rst==='running') return '<span class="review-tag" style="background:var(--accent-bg);color:var(--accent)">● Recording</span>'; if(rst==='paused') return '<span class="review-tag rt-needed">⏸ Paused</span>'; if(rst==='stopped') return '<span class="review-tag" style="background:var(--red-bg);color:var(--red)">⏹ Stopped</span>'; return '<span class="review-tag rt-needed">Pending</span>'; })()}
         ${rv.done&&rv.points?`<span class="pts-tag">+${rv.points}pts</span>`:''}
         <span class="chevron ${exp?'open':''}">▾</span>
       </div>
@@ -1073,6 +1083,12 @@ function expandReviewHist(id,e){
   if(e&&e.target.closest('.task-check')) return;
   expandedReviewId=expandedReviewId===id?null:id;
   openReviewHistory();
+}
+function expandReviewHistAndStart(id,e){
+  e.stopPropagation();
+  expandedReviewId=id;
+  renderReviewHistoryPage();
+  const tst=getReviewTS(id); if(tst.state==='idle') rvStart(id);
 }
 
 function showFullPage(title, body){
@@ -1087,6 +1103,12 @@ function expandReview(id,e){
   if(e&&e.target.closest('.task-check')) return;
   expandedReviewId=expandedReviewId===id?null:id;
   renderContent();
+}
+function expandReviewAndStart(id,e){
+  e.stopPropagation();
+  expandedReviewId=id;
+  renderContent();
+  const tst=getReviewTS(id); if(tst.state==='idle') rvStart(id);
 }
 
 let pendingReviewDoneId = null;
@@ -1138,11 +1160,11 @@ function confirmReviewDone(){
   }
   task.review.done=true;
   task.review.reviewedCount=corrected||task.review.reviewedCount||0;
-  task.review.doneDate=fmtISO(today);
+  task.review.completedAt=Date.now();
   task.review.points=rvPoints;
   const notesEl=document.getElementById('rv2-notes-'+pendingReviewDoneId)||document.getElementById('rv-notes-'+pendingReviewDoneId)||document.getElementById('rvh-notes-'+pendingReviewDoneId);
   if(notesEl) task.review.notes=notesEl.value||'';
-  feishuUpdateReview(task, 'Finish').then(()=>showSyncToast('✓ Review saved to Feishu'));
+  feishuUpdateReview(task, 'Done').then(()=>showSyncToast('✓ Review saved to Feishu'));
   playTickSound(true);
   closeModal('reviewDoneModal');
   renderContent();
@@ -1150,7 +1172,8 @@ function confirmReviewDone(){
 
 function undoReview(id){
   const task=TASKS.find(t=>t.id===id); if(!task||!task.review) return;
-  task.review.done=false; task.review.doneDate=null; RVS[id]=null;
+  task.review.done=false; task.review.completedAt=null; RVS[id]=null;
+  feishuUpdateReview(task, 'Not Started').then(()=>showSyncToast('✓ Review reverted'));
   if(currentView==='done') currentView='all';
   renderContent();
 }
@@ -1462,11 +1485,12 @@ function confirmDone(){
   }
   task.status='done'; task.totalSecs=tst.elapsed; task.sessions=[...tst.sessions];
   task.marking={totalQ:null,wrongQ:null,needReview:null,saved:false}; task.review=null;
+  task.completedAt=Date.now();
   expandedId=pendingDoneId;
 
   // ── 飞书：Status → Finish + 最终专注时间；计时记录表写一行 Finish ──
-  feishuUpdateStatus(task,'Finish',tst.elapsed).then(()=>showSyncToast('✓ Saved to Feishu'));
-  feishuLogAction(task,'Finish');
+  feishuUpdateStatus(task,'Done',tst.elapsed).then(()=>showSyncToast('✓ Saved to Feishu'));
+  feishuLogAction(task,'Done');
 
   closeModal('doneModal'); renderContent();
 }
@@ -1488,7 +1512,8 @@ function tickClass(id,e){
   const done=task.status!=='done';
   playTickSound(done);
   task.status=done?'done':'pending';
-  feishuUpdateClassStatus(task, done?'Attended':'Not Start');
+  task.completedAt=done?Date.now():null;
+  feishuUpdateClassStatus(task, done?'Attended':'Not Started');
   renderContent();
 }
 
@@ -1535,9 +1560,9 @@ function undoTask(id){
   const task=TASKS.find(t=>t.id===id); if(!task) return;
   const dateOnly = new Date(task.date); dateOnly.setHours(0,0,0,0);
   task.status = dateOnly < today ? 'overdue' : 'pending';
-  task.totalSecs=0; task.sessions=[]; task.marking=null; task.review=null;
+  task.totalSecs=0; task.sessions=[]; task.marking=null; task.review=null; task.completedAt=null;
   TS[id]=null; expandedId=null;
-  feishuUpdateStatus(task, 'Not Start', 0).then(()=>showSyncToast('✓ Reverted to pending'));
+  feishuUpdateStatus(task, 'Not Started', 0).then(()=>showSyncToast('✓ Reverted to pending'));
   renderContent();
 }
 function saveClassDetails(id){
@@ -1859,8 +1884,8 @@ function openStats(){
   const todayAll=TASKS.filter(t=>fmtISO(t.date)===fmtISO(today));
   const allDone=TASKS.filter(t=>t.status==='done');
   const todayDone=todayAll.filter(t=>t.status==='done');
-  const reviewPend=TASKS.filter(t=>t.marking&&t.marking.needReview&&t.review&&!t.review.done);
-  const reviewDone=TASKS.filter(t=>t.marking&&t.marking.needReview&&t.review&&t.review.done);
+  const reviewPend=TASKS.filter(t=>t.review&&!t.review.done);
+  const reviewDone=TASKS.filter(t=>t.review&&t.review.done);
   const totalSecs=allDone.reduce((a,t)=>a+(t.totalSecs||0),0);
   const todaySecs=todayDone.reduce((a,t)=>a+(t.totalSecs||0),0);
   const withMarking=allDone.filter(t=>t.marking&&t.marking.saved&&t.marking.totalQ);
@@ -2028,7 +2053,7 @@ async function feishuCreateTask(task){
     [F_TASK.day]:       days[d.getDay()],
     [F_TASK.subject]:   task.subject,
     [F_TASK.details]:   task.name,
-    [F_TASK.status]:    task.status === 'done' ? 'Finish' : 'Not Start',
+    [F_TASK.status]:    task.status === 'done' ? 'Done' : 'Not Started',
     [F_TASK.recurring]: task.recurId ? true : false,
   };
   if(task.estSecs)    fields[F_TASK.estimate] = Math.round(task.estSecs / 60);
@@ -2040,7 +2065,8 @@ async function feishuCreateTask(task){
   console.log('feishuCreateTask:', JSON.stringify(res));
   if(res?.data?.record?.record_id){
     task.feishuId = res.data.record.record_id;
-  } else {
+    // 把自己的record_id也写回这条记录的Record ID列,方便人工核对
+    apiCall(`/tasks/${task.feishuId}`, 'PATCH', { 'Record ID': task.feishuId });
   }
   return res;
 }
@@ -2052,6 +2078,7 @@ async function feishuUpdateStatus(task, statusLabel, elapsedSecs){
   if(!task.feishuId) { console.log('feishuUpdateStatus skipped: no feishuId', task.name); return; }
   const fields = { [F_TASK.status]: statusLabel };
   if(elapsedSecs != null) fields[F_TASK.focusTime] = elapsedSecs;
+  fields['Completed At'] = statusLabel === 'Done' ? Date.now() : null;
   const res = await apiCall(`/tasks/${task.feishuId}`, 'PATCH', fields);
   console.log('feishuUpdateStatus result:', JSON.stringify(res));
   return res;
@@ -2061,6 +2088,7 @@ async function feishuUpdateStatus(task, statusLabel, elapsedSecs){
 async function feishuUpdateClassStatus(task, statusLabel){
   if(!task.feishuId) return;
   const fields = { 'Status': statusLabel };
+  fields['Completed At'] = statusLabel === 'Attended' ? Date.now() : null;
   const res = await apiCall(`/classes/${task.feishuId}`, 'PATCH', fields);
   console.log('feishuUpdateClassStatus:', JSON.stringify(res));
   return res;
@@ -2111,6 +2139,7 @@ async function feishuLogAction(task, actionLabel, type){
     [F_LOG.actionTime]: Date.now(),
     'Type':             type || 'Task',
   };
+  if(task.feishuId) fields['Task Record ID'] = task.feishuId;
   // 不影响主流程，静默发送，不更新 syncDot
   apiCall('/timelog', 'POST', fields).then(res=>{
     console.log('feishuLogAction', actionLabel, res ? 'ok' : 'err');
@@ -2141,7 +2170,7 @@ async function feishuCreateClass(task){
     'Day':             days[d.getDay()],
     'Subject':         task.subject,
     'Task Details':    task.name,
-    'Status':          task.status === 'done' ? 'Attended' : 'Not Start',
+    'Status':          task.status === 'done' ? 'Attended' : 'Not Started',
     'Recurring':       task.recurId ? true : false,
   };
   if(startTs)        fields['Start Time']      = startTs;
@@ -2216,7 +2245,7 @@ async function feishuSaveMarking(task){
   const mk = task.marking;
   const pct = mk.totalQ ? Math.round(((mk.totalQ - (mk.wrongQ||0)) / mk.totalQ) * 100) : 0;
   const fields = {
-    [F_TASK.status]:     'Finish',
+    [F_TASK.status]:     'Done',
     [F_TASK.focusTime]:  task.totalSecs || 0,
     [F_TASK.totalQ]:     mk.totalQ    || 0,
     [F_TASK.errorCount]: mk.wrongQ    || 0,
@@ -2239,8 +2268,9 @@ async function feishuCreateReview(task){
     'Total QS Count':  mk.totalQ || 0,
     'Error Count':     mk.wrongQ || 0,
     'Accuracy':        pct,
-    'Review Status':   'Not Start',
+    'Review Status':   'Not Started',
   };
+  if(task.feishuId) fields['Task Record ID'] = task.feishuId;  // 精确关联回对应的Task记录
   const res = await apiCall('/reviews', 'POST', fields);
   console.log('feishuCreateReview:', JSON.stringify(res));
   if(res?.data?.record?.record_id && task.review){
@@ -2259,6 +2289,7 @@ async function feishuUpdateReview(task, status){
     if(!task.review.feishuId) { console.log('feishuUpdateReview: create failed, abort', task.name); return; }
   }
   const fields = { 'Review Status': status };
+  fields['Completed At'] = status === 'Done' ? Date.now() : null;
   if(task.review.totalSecs) fields['Review Time'] = task.review.totalSecs;
   if(task.review.notes)     fields['Review Notes'] = task.review.notes;
   if(task.review.points)    fields['Review Reward Points'] = task.review.points;
@@ -2286,7 +2317,7 @@ function showSyncToast(msg, isError){
 function feishuRecordToTask(rec){
   const f = rec.fields || {};
   const dateVal = f[F_TASK.date] ? new Date(f[F_TASK.date]) : new Date();
-  const statusMap = { 'Not Start':'pending', 'In Processing':'pending', 'Pause':'pending', 'Stop':'pending', 'Finish':'done' };
+  const statusMap = { 'Not Started':'pending', 'In Progress':'pending', 'Paused':'pending', 'Stopped':'pending', 'Done':'done' };
   const totalQ = f[F_TASK.totalQ] ?? null;
   const wrongQ = f[F_TASK.errorCount] ?? null;
   const hasMarking = totalQ != null;
@@ -2317,10 +2348,37 @@ function feishuRecordToTask(rec){
     recurId: null,
     isStandaloneReview: !!f['Is Standalone Review'],
     deleted: !!f['Deleted'],
+    completedAt: f['Completed At'] || null,
   };
 }
 
 // 飞书Class记录 → 内部Task对象（type='class'）
+// 把飞书Review表的一条记录,解析成前端用的review对象
+function feishuRecordToReview(rec){
+  const f = rec.fields || {};
+  const statusMap = { 'Not Started':false, 'In Progress':false, 'Paused':false, 'Stopped':false, 'Done':true };
+  return {
+    feishuId: rec.record_id,
+    taskRecordId: f['Task Record ID'] || null,
+    date: f['Date'] ? new Date(f['Date']) : new Date(),
+    subject: f['Subject'] || 'Other',
+    name: f['Task Details'] || '',
+    totalQ: Number(f['Total QS Count']) || 0,
+    wrongQ: Number(f['Error Count']) || 0,
+    accuracy: Number(f['Accuracy']) || 0,
+    reviewStatus: f['Review Status'] || 'Not Started',
+    done: statusMap[f['Review Status']] || false,
+    completedAt: f['Completed At'] || null,
+    doneDate: f['Completed At'] ? fmtISO(new Date(f['Completed At'])) : null,
+    notes: f['Review Notes'] || '',
+    totalSecs: Number(f['Review Time']) || 0,
+    points: Number(f['Review Reward Points']) || 0,
+    deleted: !!f['Deleted'],
+    sessions: [],
+    reviewedCount: 0,
+  };
+}
+
 function feishuRecordToClass(rec){
   const f = rec.fields || {};
   const dateVal = f['Date'] ? new Date(f['Date']) : new Date();
@@ -2351,6 +2409,7 @@ function feishuRecordToClass(rec){
     review: null,
     recurId: null,
     deleted: !!f['Deleted'],
+    completedAt: f['Completed At'] || null,
   };
 }
 
@@ -2377,10 +2436,11 @@ function feishuRecordToRecurring(rec){
 // 主加载函数：拉取所有历史数据，替换演示数据
 async function loadAllDataFromFeishu(){
   try {
-    const [taskRes, classRes, recurRes] = await Promise.all([
+    const [taskRes, classRes, recurRes, reviewRes] = await Promise.all([
       apiCall('/tasks', 'GET'),
       apiCall('/classes', 'GET'),
       apiCall('/recurring', 'GET'),
+      apiCall('/reviews', 'GET'),
     ]);
 
     const loadedTasks = [];
@@ -2396,6 +2456,26 @@ async function loadAllDataFromFeishu(){
       recurRes.data.items.forEach(rec => loadedRecurring.push(feishuRecordToRecurring(rec)));
     }
 
+    // 加载Review表,用Task Record ID精确关联回对应的Task
+    const loadedReviews = [];
+    if(reviewRes?.data?.items){
+      reviewRes.data.items.forEach(rec => loadedReviews.push(feishuRecordToReview(rec)));
+    }
+    let unmatchedReviewCount = 0;
+    loadedReviews.filter(r=>!r.deleted).forEach(r=>{
+      if(r.taskRecordId){
+        const matchedTask = loadedTasks.find(t=>t.feishuId===r.taskRecordId);
+        if(matchedTask){
+          matchedTask.review = r;
+          if(matchedTask.marking) matchedTask.marking.needReview = true;
+          return;
+        }
+      }
+      // 没有Task Record ID,或者关联的Task记录已不存在(历史遗留数据) → 跳过,只在Console记一下数量方便排查
+      unmatchedReviewCount++;
+    });
+    if(unmatchedReviewCount) console.log('Reviews without a matching task (likely legacy data):', unmatchedReviewCount);
+
     // 用飞书的真实数据替换内存里的演示数据
     if(loadedTasks.length > 0 || loadedRecurring.length > 0){
       TASKS = loadedTasks;
@@ -2404,7 +2484,7 @@ async function loadAllDataFromFeishu(){
       // 应该已经由Worker的每日检查(Cron或手动触发/run-daily-check)写入飞书了。
       // 如果在这里再跑一次，会因为飞书记录没有recurId导致重复生成。
       renderContent();
-      console.log('Loaded from Feishu:', loadedTasks.length, 'tasks/classes,', loadedRecurring.length, 'recurring rules');
+      console.log('Loaded from Feishu:', loadedTasks.length, 'tasks/classes,', loadedRecurring.length, 'recurring rules,', loadedReviews.length, 'reviews');
     }
   } catch(e){
     console.error('loadAllDataFromFeishu error:', e);
