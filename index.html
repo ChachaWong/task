@@ -810,7 +810,7 @@ function classCardHTML(t){
     <div class="task-main" onclick="expand('${t.id}',event)">
       <div class="task-check ${isDone?'checked':''}${isSkipped||isRescheduled?' disabled':''}" onclick="${isSkipped||isRescheduled?'':`tickClass('${t.id}',event)`}" style="${isSkipped||isRescheduled?'opacity:0.4;cursor:not-allowed':''}">${isDone?'✓':isSkipped?'⏭':isRescheduled?'↻':''}</div>
       <div class="task-info">
-        <div class="task-name">🏫 ${t.name}${timeStr?` <span style="font-size:13px;font-weight:600;color:var(--orange);font-family:'DM Mono',monospace">· ${timeStr}</span>`:''}</div>
+        <div class="task-name">🏫 ${t.name}${timeStr?` <span style="font-size:13px;font-weight:600;color:var(--orange);font-family:'DM Mono',monospace;text-decoration:none">· ${timeStr}</span>`:''}</div>
         <div class="task-meta-row">${pill(t.subject)}<span class="task-date"><span style="margin-right:2px">📅</span>${fmt(t.date)}</span>${isOverdue?`<span style="${overdueAgoStyle}">${overdueAgo.text}</span>`:''}${priceShort?`<span class="est-tag"><span style="margin-right:2px">💰</span>${priceShort}</span>`:''}${t.location?`<span class="class-loc-tag">📍${t.location}</span>`:''}${isSkipped?'<span class="review-tag" style="background:var(--amber-bg);color:var(--amber)">⏭ Skipped</span>':''}${isRescheduled?'<span class="review-tag" style="background:var(--accent-bg);color:var(--accent)">↻ Rescheduled</span>':''}</div>
       </div>
       <div class="task-right">${t.basePoints?`<span class="pts-tag">+${t.basePoints}pts</span>`:''}<span class="chevron ${exp?'open':''}">▾</span></div>
@@ -2304,8 +2304,10 @@ async function feishuCreateRecurring(rule){
   if(rule.estSecs)    fields['Estimate'] = Math.round(rule.estSecs/60);
   if(rule.basePoints) fields['Reward Points'] = rule.basePoints;
   if(rule.type==='class'){
-    if(rule.startTime)     fields['Start Time'] = rule.startTime;
-    if(rule.endTime)       fields['End Time'] = rule.endTime;
+    // Start Time/End Time在飞书是日期时间类型,不能传纯文本"19:00",需要拼上一个占位日期(用规则的开始日期)转成时间戳
+    const placeholderDate = rule.startDate || fmtISO(today);
+    if(rule.startTime) fields['Start Time'] = new Date(placeholderDate+'T'+rule.startTime+':00').getTime();
+    if(rule.endTime)   fields['End Time']   = new Date(placeholderDate+'T'+rule.endTime+':00').getTime();
     if(rule.location)      fields['Location'] = rule.location;
     if(rule.pricePerLesson) fields['Price Per Lesson'] = Number(rule.pricePerLesson);
     if(rule.packageTotal)  fields['Package Total'] = Number(rule.packageTotal);
@@ -2316,7 +2318,12 @@ async function feishuCreateRecurring(rule){
   Object.keys(fields).forEach(k => fields[k]==null && delete fields[k]);
   const res = await apiCall('/recurring', 'POST', fields);
   console.log('feishuCreateRecurring:', JSON.stringify(res));
-  if(res?.data?.record?.record_id) rule.feishuId = res.data.record.record_id;
+  if(res?.data?.record?.record_id){
+    rule.feishuId = res.data.record.record_id;
+  } else {
+    console.error('feishuCreateRecurring FAILED:', JSON.stringify(res));
+    showSyncToast('⚠ Failed to save recurring rule to Feishu — check console');
+  }
   return res;
 }
 
@@ -2344,8 +2351,9 @@ async function feishuUpdateRecurringFull(rule){
   if(rule.estSecs)    fields['Estimate'] = Math.round(rule.estSecs/60);
   if(rule.basePoints) fields['Reward Points'] = rule.basePoints;
   if(rule.type==='class'){
-    fields['Start Time'] = rule.startTime || null;
-    fields['End Time'] = rule.endTime || null;
+    const placeholderDate = rule.startDate || fmtISO(today);
+    fields['Start Time'] = rule.startTime ? new Date(placeholderDate+'T'+rule.startTime+':00').getTime() : null;
+    fields['End Time']   = rule.endTime   ? new Date(placeholderDate+'T'+rule.endTime+':00').getTime()   : null;
     fields['Location'] = rule.location || null;
     fields['Price Per Lesson'] = rule.pricePerLesson ? Number(rule.pricePerLesson) : null;
     fields['Package Total'] = rule.packageTotal ? Number(rule.packageTotal) : null;
@@ -2568,8 +2576,9 @@ function feishuRecordToRecurring(rec){
     basePoints: Number(f['Reward Points']) || 0,
   };
   if(type==='class'){
-    result.startTime = f['Start Time'] || null;
-    result.endTime = f['End Time'] || null;
+    const toTime = ts => { if(!ts) return null; const d=new Date(ts); return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0'); };
+    result.startTime = toTime(f['Start Time']);
+    result.endTime = toTime(f['End Time']);
     result.location = f['Location'] || '';
     result.pricePerLesson = Number(f['Price Per Lesson']) || 0;
     result.packageTotal = Number(f['Package Total']) || 0;
