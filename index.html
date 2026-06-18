@@ -645,17 +645,21 @@ function renderContent(){
 
   if(currentView==='all'){
     let html = '';
-    if(overdueAll.length){
+    const reviewOverdueSort = [...reviewOverdueAll].sort((a,b)=>(a.done?1:0)-(b.done?1:0)||new Date(a.date)-new Date(b.date));
+    if(overdueAll.length || reviewOverdueSort.length){
       const overdueSort = [...overdueAll].sort((a,b)=>(a.status==='done'?1:0)-(b.status==='done'?1:0)||new Date(a.date)-new Date(b.date));
-      html += sectionHTML('Overdue', overdueSort.length, 'badge-red', overdueSort.map(taskHTML).join(''));
+      const combinedCount = overdueSort.length + reviewOverdueSort.length;
+      let secHtml = `<div class="section-header"><div class="section-title">Overdue</div><span class="section-badge badge-red">${combinedCount}</span></div>`;
+      if(overdueSort.length) secHtml += overdueSort.map(taskHTML).join('');
+      if(reviewOverdueSort.length) secHtml += `<div class="rv-group-title">📌 Review</div>` + reviewOverdueSort.map(reviewCardHTML).join('');
+      html += `<div class="section">${secHtml}</div>`;
     }
     const todayPendSort = [...todayPending].sort((a,b)=>a.subject.localeCompare(b.subject));
     const todayDoneSort = [...todayDone].sort((a,b)=>a.subject.localeCompare(b.subject));
     html += sectionHTML('Today', todayAll.length, '', [...todayPendSort,...todayDoneSort].map(taskHTML).join('')||emptyHTML('No tasks today.'));
-    const rvCombined = [...reviewOverdueAll, ...reviewTodayAll];
-    if(rvCombined.length){
-      const rvSort=[...rvCombined].sort((a,b)=>(a.done?1:0)-(b.done?1:0)||new Date(a.date)-new Date(b.date));
-      html += sectionHTML('Review', rvCombined.length, 'badge-amber', rvSort.map(reviewCardHTML).join(''));
+    if(reviewTodayAll.length){
+      const rvSort=[...reviewTodayAll].sort((a,b)=>(a.done?1:0)-(b.done?1:0)||a.subject.localeCompare(b.subject));
+      html += sectionHTML('Review', rvSort.length, 'badge-amber', rvSort.map(reviewCardHTML).join(''));
     }
     if(!html) html = emptyHTML('Nothing to show today.');
     area.innerHTML = html;
@@ -791,6 +795,10 @@ function classCardHTML(t){
   const isRescheduled=t.classStatus==='rescheduled';
   const timeStr=t.startTime&&t.endTime?`${fmtTime(t.startTime)}–${fmtTime(t.endTime)}`:'';
   const exp = expandedId===t.id;
+  const dateOnly = new Date(t.date); dateOnly.setHours(0,0,0,0);
+  const isOverdue = dateOnly < today;
+  const overdueAgo = isOverdue ? daysAgoLabel(t.date) : null;
+  const overdueAgoStyle = overdueAgo ? `font-size:10px;font-weight:600;padding:2px 6px;border-radius:4px;background:${overdueAgo.cls==='urgent'?'var(--red-bg)':'var(--amber-bg)'};color:${overdueAgo.cls==='urgent'?'var(--red)':'var(--amber)'}` : '';
   let priceStr = '';
   if(t.packageTotal&&t.totalLessons){ const pkg=Number(t.packageTotal), lessons=Number(t.totalLessons); const perL=Math.round(pkg/lessons*10)/10; priceStr=`$${pkg.toFixed(1)} package · ${lessons} lessons ($${perL.toFixed(1)}/lesson)`; }
   else if(t.packageTotal){ priceStr=`$${Number(t.packageTotal).toFixed(1)} package`; }
@@ -801,7 +809,7 @@ function classCardHTML(t){
       <div class="task-check ${isDone?'checked':''}${isSkipped||isRescheduled?' disabled':''}" onclick="${isSkipped||isRescheduled?'':`tickClass('${t.id}',event)`}" style="${isSkipped||isRescheduled?'opacity:0.4;cursor:not-allowed':''}">${isDone?'✓':isSkipped?'⏭':isRescheduled?'↻':''}</div>
       <div class="task-info">
         <div class="task-name">🏫 ${t.name}</div>
-        <div class="task-meta-row">${pill(t.subject)}${timeStr?`<span class="class-time-tag">${timeStr}</span>`:''}${t.location?`<span class="class-loc-tag">📍${t.location}</span>`:''}${isSkipped?'<span class="review-tag" style="background:var(--amber-bg);color:var(--amber)">⏭ Skipped</span>':''}${isRescheduled?'<span class="review-tag" style="background:var(--accent-bg);color:var(--accent)">↻ Rescheduled</span>':''}</div>
+        <div class="task-meta-row">${pill(t.subject)}<span class="task-date">${fmt(t.date)}</span>${isOverdue?`<span style="${overdueAgoStyle}">${overdueAgo.text}</span>`:''}${timeStr?`<span class="class-time-tag">${timeStr}</span>`:''}${t.location?`<span class="class-loc-tag">📍${t.location}</span>`:''}${isSkipped?'<span class="review-tag" style="background:var(--amber-bg);color:var(--amber)">⏭ Skipped</span>':''}${isRescheduled?'<span class="review-tag" style="background:var(--accent-bg);color:var(--accent)">↻ Rescheduled</span>':''}</div>
         ${priceStr?`<div style="font-size:12px;color:var(--accent);margin-top:3px;font-weight:500">💰 ${priceStr}</div>`:''}
       </div>
       <div class="task-right">${t.basePoints?`<span class="pts-tag">+${t.basePoints}pts</span>`:''}<span class="chevron ${exp?'open':''}">▾</span></div>
