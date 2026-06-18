@@ -81,7 +81,8 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
 .class-loc-tag{font-size:13px;color:var(--text-3);}
 .task-right{display:flex;align-items:center;gap:7px;flex-shrink:0;}
 .task-duration{font-size:13px;font-family:'DM Mono',monospace;color:var(--text-2);background:var(--bg);padding:3px 8px;border-radius:5px;}
-.acc-badge{font-size:13px;font-weight:600;padding:3px 9px;border-radius:5px;font-family:'DM Mono',monospace;}
+.acc-badge{font-size:13px;font-weight:600;padding:3px 9px;border-radius:5px;font-family:'DM Mono',monospace;display:inline-block;min-width:44px;text-align:center;}
+.acc-none{background:var(--bg);color:var(--text-3);}
 .acc-good{background:var(--green-bg);color:var(--green);}.acc-ok{background:var(--amber-bg);color:var(--amber);}.acc-bad{background:var(--red-bg);color:var(--red);}
 .review-tag{font-size:12px;font-weight:600;padding:3px 8px;border-radius:5px;}
 .rt-needed{background:var(--amber-bg);color:var(--amber);}.rt-done{background:var(--purple-bg);color:var(--purple);}
@@ -723,6 +724,11 @@ function pill(s){
 function durFmt(s){ if(!s) return ''; const h=Math.floor(s/3600),m=Math.floor((s%3600)/60),sec=Math.floor(s%60); let parts=[]; if(h>0) parts.push(h+'h'); if(m>0) parts.push(m+'m'); if(sec>0) parts.push(sec+'s'); return parts.length?parts.join(' '):'0s'; }
 function accPct(tq,wq){ if(!tq) return null; return Math.round(((tq-(wq||0))/tq)*100); }
 function accBadge(pct){ if(pct===null) return ''; const c=pct>=90?'acc-good':pct>=70?'acc-ok':'acc-bad'; return `<span class="acc-badge ${c}">${pct}%</span>`; }
+function accBadgeHTML(pct){
+  if(pct===null||pct===undefined||isNaN(pct)) return `<span class="acc-badge acc-none">—%</span>`;
+  const c = pct>=90?'acc-good':pct>=70?'acc-ok':'acc-bad';
+  return `<span class="acc-badge ${c}">${pct}%</span>`;
+}
 function fmtSecs(s){ const h=Math.floor(s/3600),m=Math.floor((s%3600)/60),sec=s%60; return `${pad(h)}:${pad(m)}:${pad(sec)}`; }
 function fmtTime(t){ if(!t) return ''; const [h,m]=t.split(':'); const hh=parseInt(h); return `${hh>12?hh-12:hh||12}:${m}${hh>=12?'pm':'am'}`; }
 function pad(n){ return String(n).padStart(2,'0'); }
@@ -928,7 +934,7 @@ function reviewCardHTML(t){
       <div class="task-right">
         ${(rv.totalSecs||(getReviewTS(t.id).elapsed>0?getReviewTS(t.id).elapsed:0))?`<span class="task-duration" style="background:var(--amber-bg);color:var(--amber)">📌 ${durFmt(rv.totalSecs||getReviewTS(t.id).elapsed)}</span>`:''}
         ${rv.done?'<span class="review-tag rt-done">✓ Done</span>':(()=>{ const rst=getReviewTS(t.id).state; if(rst==='running') return '<span class="review-tag" style="background:var(--accent-bg);color:var(--accent)">● Recording</span>'; if(rst==='paused') return '<span class="review-tag rt-needed">⏸ Paused</span>'; if(rst==='stopped') return '<span class="review-tag" style="background:var(--red-bg);color:var(--red)">⏹ Stopped</span>'; return `<button class="action-btn primary" onclick="expandReviewAndStart('${t.id}',event)">▶ Start</button>`; })()}
-        <span class="acc-badge ${pct>=90?'acc-good':pct>=70?'acc-ok':'acc-bad'}">${pct!==null?pct+'%':'—'}</span>
+        ${accBadgeHTML(pct)}
         ${rv.done&&rv.points?`<span class="pts-tag">+${rv.points}pts</span>`:''}
         <span class="chevron ${exp?'open':''}">▾</span>
       </div>
@@ -1070,7 +1076,7 @@ function reviewPageCardHTML(t){
       <div class="task-right">
         ${(rv.totalSecs||(getReviewTS(t.id).elapsed>0?getReviewTS(t.id).elapsed:0))?`<span class="task-duration" style="background:var(--amber-bg);color:var(--amber)">📌 ${durFmt(rv.totalSecs||getReviewTS(t.id).elapsed)}</span>`:''}
         ${rv.done?'<span class="review-tag rt-done">✓ Done</span>':(()=>{ const rst=getReviewTS(t.id).state; if(rst==='running') return '<span class="review-tag" style="background:var(--accent-bg);color:var(--accent)">● Recording</span>'; if(rst==='paused') return '<span class="review-tag rt-needed">⏸ Paused</span>'; if(rst==='stopped') return '<span class="review-tag" style="background:var(--red-bg);color:var(--red)">⏹ Stopped</span>'; return `<button class="action-btn primary" onclick="expandReviewHistAndStart('${t.id}',event)">▶ Start</button>`; })()}
-        <span class="acc-badge ${pct>=90?'acc-good':pct>=70?'acc-ok':'acc-bad'}">${pct!==null?pct+'%':'—'}</span>
+        ${accBadgeHTML(pct)}
         ${rv.done&&rv.points?`<span class="pts-tag">+${rv.points}pts</span>`:''}
         <span class="chevron ${exp?'open':''}">▾</span>
       </div>
@@ -2342,9 +2348,7 @@ function feishuRecordToTask(rec){
       saved: true
     } : null,
     sessions: [],
-    review: (hasMarking && f[F_TASK.needReview]) ? {
-      done:false, notes:'', reviewedCount:0, totalWrong:wrongQ||0, sessions:[], totalSecs:0
-    } : null,
+    review: null,  // 不再凭Task的needReview标记臆造review对象;真正的review数据由loadAllDataFromFeishu里基于Task Record ID的匹配逻辑填充
     recurId: null,
     isStandaloneReview: !!f['Is Standalone Review'],
     deleted: !!f['Deleted'],
@@ -2456,12 +2460,12 @@ async function loadAllDataFromFeishu(){
       recurRes.data.items.forEach(rec => loadedRecurring.push(feishuRecordToRecurring(rec)));
     }
 
-    // 加载Review表,用Task Record ID精确关联回对应的Task
+    // 加载Review表 — Review列表的显示完全只看Review表本身,Task Record ID只是用来方便关联展示原作业信息,不是显示门槛
     const loadedReviews = [];
     if(reviewRes?.data?.items){
       reviewRes.data.items.forEach(rec => loadedReviews.push(feishuRecordToReview(rec)));
     }
-    let unmatchedReviewCount = 0;
+    let standaloneCounter = 0;
     loadedReviews.filter(r=>!r.deleted).forEach(r=>{
       if(r.taskRecordId){
         const matchedTask = loadedTasks.find(t=>t.feishuId===r.taskRecordId);
@@ -2471,10 +2475,14 @@ async function loadAllDataFromFeishu(){
           return;
         }
       }
-      // 没有Task Record ID,或者关联的Task记录已不存在(历史遗留数据) → 跳过,只在Console记一下数量方便排查
-      unmatchedReviewCount++;
+      // 没有Task Record ID,或对应Task已不存在 → 仍然要显示,构造一个轻量容器承载这条Review
+      loadedTasks.push({
+        id: 'RV'+(standaloneCounter++), type:'task', name:r.name, subject:r.subject,
+        date:r.date, status:'done', estSecs:null, basePoints:0, totalSecs:0,
+        marking:{totalQ:r.totalQ||null, wrongQ:r.wrongQ||null, needReview:true, saved:true},
+        review:r, sessions:[], recurId:null, feishuId:null, isStandaloneReview:true,
+      });
     });
-    if(unmatchedReviewCount) console.log('Reviews without a matching task (likely legacy data):', unmatchedReviewCount);
 
     // 用飞书的真实数据替换内存里的演示数据
     if(loadedTasks.length > 0 || loadedRecurring.length > 0){
