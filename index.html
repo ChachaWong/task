@@ -612,9 +612,10 @@ function setView(view){
   renderContent();
 }
 
-// 判断一条记录是否应该在主列表里隐藏(已删除/Skip的课)
+// 判断一条记录是否应该在主列表里隐藏(已删除/Skip的课/已被Reschedule的原始记录)
+// 注意: Reschedule后原始记录在飞书里依然保留(不软删除),只是前端UI层面完全过滤掉,不在任何列表里出现
 function isHidden(t){
-  return t.deleted || t.classStatus==='skipped';
+  return t.deleted || t.classStatus==='skipped' || t.classStatus==='rescheduled';
 }
 
 function renderContent(){
