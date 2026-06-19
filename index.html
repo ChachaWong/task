@@ -527,7 +527,7 @@ let TASKS = [
 ];
 let taskIdCounter = 7;
 
-function generateRecurring(){
+function generateRecurring(writeToFeishu){
   const todayStr=fmtISO(today), todayDay=DAYS_SHORT[today.getDay()];
   RECURRING.forEach(r=>{
     if(!r.active) return;
@@ -538,21 +538,27 @@ function generateRecurring(){
       (r.freq==='weekly'&&r.days.includes(todayDay)) ||
       (r.freq==='monthly'&&r.days.includes(String(today.getDate())));
     if(!matches) return;
-    if(TASKS.find(t=>t.recurId===r.id&&fmtISO(t.date)===todayStr)) return;
+    if(r.feishuId && TASKS.find(t=>t.recurId===r.feishuId&&fmtISO(t.date)===todayStr)) return;
+    if(!r.feishuId && TASKS.find(t=>t.recurId===r.id&&fmtISO(t.date)===todayStr)) return;
     const id='T'+String(taskIdCounter++).padStart(3,'0');
+    const linkId = r.feishuId || r.id;  // 写入飞书后用真实record_id关联,写入飞书前(刚新建还没拿到feishuId)先用临时id占位
     if(r.type==='class'){
-      TASKS.push({id,type:'class',name:r.name,subject:r.subject,startTime:r.startTime,endTime:r.endTime,
-        location:r.location,date:new Date(today),status:'pending',recurId:r.id,
+      const newClass={id,type:'class',name:r.name,subject:r.subject,startTime:r.startTime,endTime:r.endTime,
+        location:r.location,date:new Date(today),status:'pending',recurId:linkId,
         basePoints:r.basePoints||0,sessions:[],marking:null,review:null,totalSecs:0,estSecs:null,feishuId:null,
-        pricePerLesson:r.pricePerLesson||0,packageTotal:r.packageTotal||0,totalLessons:r.totalLessons||0,classNotes:r.classNotes||''});
+        pricePerLesson:r.pricePerLesson||0,packageTotal:r.packageTotal||0,totalLessons:r.totalLessons||0,classNotes:r.classNotes||''};
+      TASKS.push(newClass);
+      if(writeToFeishu) feishuCreateClass(newClass).then(()=>console.log('Recurring class auto-generated to Feishu:', newClass.name));
     } else {
-      TASKS.push({id,type:'task',name:r.name,subject:r.subject,details:r.details,date:new Date(today),
+      const newTask={id,type:'task',name:r.name,subject:r.subject,details:r.details,date:new Date(today),
         status:'pending',estSecs:r.estSecs,basePoints:r.basePoints||0,
-        totalSecs:0,marking:null,sessions:[],review:null,recurId:r.id,feishuId:null});
+        totalSecs:0,marking:null,sessions:[],review:null,recurId:linkId,feishuId:null};
+      TASKS.push(newTask);
+      if(writeToFeishu) feishuCreateTask(newTask).then(()=>console.log('Recurring task auto-generated to Feishu:', newTask.name));
     }
   });
 }
-generateRecurring();
+generateRecurring(false);
 
 // ── TIMER STATE ──
 const TS={}, RVS={};
@@ -2124,6 +2130,10 @@ async function feishuCreateTask(task){
   if(task.basePoints) fields[F_TASK.points]   = task.basePoints;
   if(task.totalSecs)  fields[F_TASK.focusTime] = task.totalSecs;  // 补录时如果填了用时,一起写入
   if(task.isStandaloneReview) fields['Is Standalone Review'] = true;
+  if(task.recurId){
+    const rule = RECURRING.find(r=>r.id===task.recurId||r.feishuId===task.recurId);
+    if(rule?.feishuId) fields['Recurring Rule ID'] = rule.feishuId;  // 存真实的飞书record_id,用于精确去重
+  }
 
   const res = await apiCall('/tasks', 'POST', fields);
   console.log('feishuCreateTask:', JSON.stringify(res));
@@ -2280,6 +2290,10 @@ async function feishuCreateClass(task){
   if(task.classNotes)    fields['Notes']           = task.classNotes;
   if(task.location)      fields['Location']        = task.location;
   if(task.basePoints)    fields['Reward Points']   = task.basePoints;
+  if(task.recurId){
+    const rule = RECURRING.find(r=>r.id===task.recurId||r.feishuId===task.recurId);
+    if(rule?.feishuId) fields['Recurring Rule ID'] = rule.feishuId;  // 存真实的飞书record_id,用于精确去重
+  }
 
   const res = await apiCall('/classes', 'POST', fields);
   console.log('feishuCreateClass:', JSON.stringify(res));
@@ -2320,6 +2334,7 @@ async function feishuCreateRecurring(rule){
   console.log('feishuCreateRecurring:', JSON.stringify(res));
   if(res?.data?.record?.record_id){
     rule.feishuId = res.data.record.record_id;
+    apiCall(`/recurring/${rule.feishuId}`, 'PATCH', { 'Record ID': rule.feishuId });  // 回填人工可读的Record ID列,方便在飞书后台直接查看
   } else {
     console.error('feishuCreateRecurring FAILED:', JSON.stringify(res));
     showSyncToast('⚠ Failed to save recurring rule to Feishu — check console');
@@ -2483,7 +2498,7 @@ function feishuRecordToTask(rec){
     } : null,
     sessions: [],
     review: null,  // 不再凭Task的needReview标记臆造review对象;真正的review数据由loadAllDataFromFeishu里基于Task Record ID的匹配逻辑填充
-    recurId: null,
+    recurId: f['Recurring Rule ID'] || null,
     isStandaloneReview: !!f['Is Standalone Review'],
     deleted: !!f['Deleted'],
     completedAt: f['Completed At'] || null,
@@ -2548,7 +2563,7 @@ function feishuRecordToClass(rec){
     sessions: [],
     marking: null,
     review: null,
-    recurId: null,
+    recurId: f['Recurring Rule ID'] || null,
     deleted: !!f['Deleted'],
     completedAt: f['Completed At'] || null,
   };
@@ -2625,9 +2640,9 @@ async function loadAllDataFromFeishu(){
       TASKS = loadedTasks;
       RECURRING = loadedRecurring;
       REVIEWS = loadedReviews;
-      // 注意：这里不再调用 generateRecurring()，因为今天该生成的recurring任务
-      // 应该已经由Worker的每日检查(Cron或手动触发/run-daily-check)写入飞书了。
-      // 如果在这里再跑一次，会因为飞书记录没有recurId导致重复生成。
+      // 数据加载完后,立即检查今天该生成的Recurring任务/课程,如果还没生成就真正写入飞书
+      // (这是方案A: 前端自己负责生成,不依赖Worker的Cron。去重靠Recurring Rule ID精确匹配,不会重复)
+      generateRecurring(true);
       renderContent();
       console.log('Loaded from Feishu:', loadedTasks.length, 'tasks/classes,', loadedRecurring.length, 'recurring rules,', loadedReviews.length, 'reviews');
     }
