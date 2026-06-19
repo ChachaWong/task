@@ -1039,17 +1039,32 @@ function reviewSubHTML(r, prefix){
 }
 
 let rvSubjectFilter = '';
+let rvDateFrom = '', rvDateTo = '', rvDateBasis = 'task';  // rvDateBasis: 'task'=按作业日期筛, 'completed'=按完成日期筛
 function openReviewHistory(){
   rvSubjectFilter = '';
   renderReviewHistoryPage();
 }
+function applyRvFilters(allRaw){
+  let result = rvSubjectFilter ? allRaw.filter(r=>r.subject===rvSubjectFilter) : allRaw;
+  if(rvDateFrom || rvDateTo){
+    result = result.filter(r=>{
+      const basisDate = rvDateBasis==='completed' ? (r.completedAt ? fmtISO(new Date(r.completedAt)) : null) : fmtISO(r.date);
+      if(!basisDate) return false;  // 按完成日期筛时,没完成的记录没有完成日期,自动排除
+      if(rvDateFrom && basisDate<rvDateFrom) return false;
+      if(rvDateTo && basisDate>rvDateTo) return false;
+      return true;
+    });
+  }
+  return result;
+}
 function renderReviewHistoryPage(){
   const allRaw = REVIEWS;
   const subjects = [...new Set(allRaw.map(r=>r.subject))].sort();
-  const all = rvSubjectFilter ? allRaw.filter(r=>r.subject===rvSubjectFilter) : allRaw;
+  const all = applyRvFilters(allRaw);
   const pending = [...all.filter(r=>!r.done)].sort((a,b)=>(accPct(a.totalQ,a.wrongQ)??100)-(accPct(b.totalQ,b.wrongQ)??100));
   const done    = [...all.filter(r=>r.done)].sort((a,b)=>new Date(b.date)-new Date(a.date));
   const selectStyle = "padding:7px 12px;border:1px solid var(--border2);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;color:var(--text);background:white;cursor:pointer";
+  const dateInputStyle = "padding:7px 10px;border:1px solid var(--border2);border-radius:8px;font-size:13px;font-family:'DM Mono',monospace;color:var(--text);background:white";
   let html = `<div style="margin-bottom:12px;display:flex;gap:6px;flex-wrap:wrap;align-items:center">
     <button class="rv-filter-btn sel" onclick="setRvFilter('all',this)">All (${all.length})</button>
     <button class="rv-filter-btn" onclick="setRvFilter('pending',this)">Pending (${pending.length})</button>
@@ -1058,7 +1073,18 @@ function renderReviewHistoryPage(){
       <option value="">All subjects</option>
       ${subjects.map(s=>`<option value="${s}" ${rvSubjectFilter===s?'selected':''}>${s}</option>`).join('')}
     </select>
-  </div><div id="rvHistoryContent">`;
+  </div>
+  <div style="margin-bottom:14px;display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+    <select onchange="setRvDateBasis(this.value)" style="${selectStyle}">
+      <option value="task" ${rvDateBasis==='task'?'selected':''}>By task date</option>
+      <option value="completed" ${rvDateBasis==='completed'?'selected':''}>By completed date</option>
+    </select>
+    <input type="date" value="${rvDateFrom}" onchange="setRvDateRange(this.value,null)" style="${dateInputStyle}">
+    <span style="font-size:13px;color:var(--text-3)">to</span>
+    <input type="date" value="${rvDateTo}" onchange="setRvDateRange(null,this.value)" style="${dateInputStyle}">
+    ${(rvDateFrom||rvDateTo)?`<button onclick="clearRvDateRange()" style="padding:6px 10px;background:var(--bg);border:1px solid var(--border2);border-radius:8px;font-size:12px;color:var(--text-3);cursor:pointer">✕ Clear</button>`:''}
+  </div>
+  <div id="rvHistoryContent">`;
   if(!all.length){ html+='<div class="empty">No review records yet.</div>'; }
   else {
     if(pending.length){ html+=`<div class="rv-group-title">Pending · ${pending.length}</div>`+pending.map(reviewPageCardHTML).join(''); }
@@ -1071,12 +1097,25 @@ function setRvSubjectFilter(s){
   rvSubjectFilter = s;
   renderReviewHistoryPage();
 }
+function setRvDateBasis(v){
+  rvDateBasis = v;
+  renderReviewHistoryPage();
+}
+function setRvDateRange(from, to){
+  if(from!=null) rvDateFrom = from;
+  if(to!=null) rvDateTo = to;
+  renderReviewHistoryPage();
+}
+function clearRvDateRange(){
+  rvDateFrom = ''; rvDateTo = '';
+  renderReviewHistoryPage();
+}
 
 function setRvFilter(f, btn){
   document.querySelectorAll('.rv-filter-btn').forEach(b=>b.classList.remove('sel'));
   btn.classList.add('sel');
   const allRaw=REVIEWS;
-  const all = rvSubjectFilter ? allRaw.filter(r=>r.subject===rvSubjectFilter) : allRaw;
+  const all = applyRvFilters(allRaw);
   const pending=[...all.filter(r=>!r.done)].sort((a,b)=>(accPct(a.totalQ,a.wrongQ)??100)-(accPct(b.totalQ,b.wrongQ)??100));
   const done=[...all.filter(r=>r.done)].sort((a,b)=>new Date(b.date)-new Date(a.date));
   const list=f==='pending'?pending:f==='done'?done:[...pending,...done];
@@ -1093,12 +1132,22 @@ function reviewPageCardHTML(r){
   const progPct=totalWrong>0?Math.round((reviewed/totalWrong)*100):0;
   const progColor=progPct===100?'var(--green)':progPct>=50?'var(--amber)':'var(--red)';
   const agoStyle=`font-size:12px;font-weight:600;padding:3px 8px;border-radius:4px;background:${ago.cls==='urgent'?'var(--red-bg)':ago.cls==='warn'?'var(--amber-bg)':'var(--green-bg)'};color:${ago.cls==='urgent'?'var(--red)':ago.cls==='warn'?'var(--amber)':'var(--green)'}`;
+  // 已完成的: 显示完成日期 + 间隔了多少天才复习完(从作业日期算到完成日期)
+  let completedInfo = '';
+  if(r.done && r.completedAt){
+    const compDate = new Date(r.completedAt);
+    const taskDateOnly = new Date(r.date); taskDateOnly.setHours(0,0,0,0);
+    const compDateOnly = new Date(compDate); compDateOnly.setHours(0,0,0,0);
+    const gapDays = Math.round((compDateOnly-taskDateOnly)/(1000*60*60*24));
+    const gapLabel = gapDays===0 ? 'same day' : gapDays===1 ? '1 day later' : `${gapDays} days later`;
+    completedInfo = `<span class="task-date" style="background:var(--green-bg);color:var(--green)"><span style="margin-right:2px">✓</span>${fmt(compDate)}</span><span style="font-size:11px;color:var(--text-3)">(${gapLabel})</span>`;
+  }
   return `<div class="task-card${exp?' active':''}${r.done?' done':''}" id="rhist-${r.feishuId}" style="${r.done?'border-left:3px solid var(--green)':''}">
     <div class="task-main" onclick="expandReviewHist('${r.feishuId}',event)">
       <div class="task-check ${r.done?'checked':''}" onclick="tickReview('${r.feishuId}',event)">${r.done?'✓':''}</div>
       <div class="task-info">
         <div class="task-name" style="${r.done?'text-decoration:line-through;color:var(--text-3)':''}">${r.name}</div>
-        <div class="task-meta-row" style="margin-bottom:${totalWrong>0?'5px':'0'}">${pill(r.subject)}<span class="task-date"><span style="margin-right:2px">📅</span>${fmt(r.date)}</span><span style="${agoStyle}">${ago.text}</span>${r.done&&r.totalSecs?`<span style="font-size:11px;font-family:'DM Mono',monospace;color:var(--text-3)">⏱ ${durFmt(r.totalSecs)}</span>`:''}</div>
+        <div class="task-meta-row" style="margin-bottom:${totalWrong>0?'5px':'0'}">${pill(r.subject)}<span class="task-date"><span style="margin-right:2px">📅</span>${fmt(r.date)}</span>${r.done?completedInfo:`<span style="${agoStyle}">${ago.text}</span>`}${r.done&&r.totalSecs?`<span style="font-size:11px;font-family:'DM Mono',monospace;color:var(--text-3)">⏱ ${durFmt(r.totalSecs)}</span>`:''}</div>
         ${totalWrong>0?`<div style="display:flex;align-items:center;gap:8px"><div style="flex:1;height:5px;background:var(--border);border-radius:3px;overflow:hidden;max-width:160px"><div style="width:${progPct}%;height:100%;background:${progColor};border-radius:3px"></div></div><span style="font-size:11px;font-family:'DM Mono',monospace;color:var(--text-3)">${reviewed}/${totalWrong} reviewed</span></div>`:''}
       </div>
       <div class="task-right">
@@ -1946,8 +1995,8 @@ function addSkip(id){
 function removeSkip(id,idx){ const r=RECURRING.find(r=>r.id===id); if(r&&r.skipDates) r.skipDates.splice(idx,1); renderRecurringList(); }
 // ── STATS PAGE ──
 function openStats(){
-  const todayAll=TASKS.filter(t=>fmtISO(t.date)===fmtISO(today));
-  const allDone=TASKS.filter(t=>t.status==='done');
+  const todayAll=TASKS.filter(t=>fmtISO(t.date)===fmtISO(today)&&!isHidden(t));
+  const allDone=TASKS.filter(t=>t.status==='done'&&!isHidden(t));
   const todayDone=todayAll.filter(t=>t.status==='done');
   const reviewPend=REVIEWS.filter(r=>!r.done);
   const reviewDone=REVIEWS.filter(r=>r.done);
@@ -1969,7 +2018,7 @@ function openStats(){
     return `<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px"><div style="width:80px;font-size:12px;font-weight:600;color:var(--text-2);flex-shrink:0">${subj}</div><div style="flex:1;height:8px;background:var(--border);border-radius:4px;overflow:hidden"><div style="width:${barW}%;height:100%;background:var(--accent);border-radius:4px"></div></div><div style="width:50px;font-size:12px;font-family:'DM Mono',monospace;color:var(--text-2);text-align:right">${durFmt(s.secs)||'—'}</div><div style="width:36px;font-size:11px;font-family:'DM Mono',monospace;color:${accColor};text-align:right">${subAcc!==null?subAcc+'%':'—'}</div></div>`;
   }).join('');
   const last7=[];
-  for(let i=6;i>=0;i--){ const d=new Date(today); d.setDate(d.getDate()-i); const dayTasks=TASKS.filter(t=>fmtISO(t.date)===fmtISO(d)&&t.status==='done'); last7.push({label:d.toLocaleDateString('en-AU',{weekday:'short'}),secs:dayTasks.reduce((a,t)=>a+(t.totalSecs||0),0),isToday:i===0}); }
+  for(let i=6;i>=0;i--){ const d=new Date(today); d.setDate(d.getDate()-i); const dayTasks=TASKS.filter(t=>fmtISO(t.date)===fmtISO(d)&&t.status==='done'&&!isHidden(t)); last7.push({label:d.toLocaleDateString('en-AU',{weekday:'short'}),secs:dayTasks.reduce((a,t)=>a+(t.totalSecs||0),0),isToday:i===0}); }
   const maxDaySecs=Math.max(...last7.map(d=>d.secs),1);
   const dayBars=last7.map(d=>`<div style="display:flex;flex-direction:column;align-items:center;gap:4px;flex:1"><div style="font-size:10px;font-family:'DM Mono',monospace;color:${d.secs>0?'var(--text-2)':'var(--text-3)'}">${d.secs>0?durFmt(d.secs):''}</div><div style="width:100%;background:var(--border);border-radius:4px;height:60px;display:flex;align-items:flex-end;overflow:hidden"><div style="width:100%;height:${Math.round((d.secs/maxDaySecs)*100)}%;background:${d.isToday?'var(--accent)':'var(--accent-bg)'};border-radius:4px;min-height:${d.secs>0?'4px':'0'}"></div></div><div style="font-size:10px;font-weight:${d.isToday?'700':'500'};color:${d.isToday?'var(--accent)':'var(--text-3)'}">${d.label}</div></div>`).join('');
   const statBox=(label,value,sub,color)=>`<div style="background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:14px 16px;flex:1"><div style="font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;color:var(--text-3);margin-bottom:4px">${label}</div><div style="font-size:22px;font-weight:700;font-family:'DM Mono',monospace;color:${color};line-height:1">${value}</div>${sub?`<div style="font-size:11px;color:var(--text-3);margin-top:3px">${sub}</div>`:''}</div>`;
@@ -1981,7 +2030,7 @@ function openStats(){
 }
 
 function openPoints(){
-  const allDone=TASKS.filter(t=>t.status==='done');
+  const allDone=TASKS.filter(t=>t.status==='done'&&!isHidden(t));
   const totalPts=allDone.reduce((a,t)=>a+(t.basePoints||0),0);
   const reviewPts=REVIEWS.filter(r=>r.done).reduce((a,r)=>a+(r.points||0),0);
   const html=`<div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px;margin-bottom:16px;text-align:center"><div style="font-size:40px;margin-bottom:8px">⭐</div><div style="font-size:36px;font-weight:700;font-family:'DM Mono',monospace;color:#9333EA">${totalPts+reviewPts} pts</div><div style="font-size:13px;color:var(--text-3);margin-top:4px">Total points earned</div></div>
@@ -1991,7 +2040,7 @@ function openPoints(){
 }
 
 function openErrorBook(){
-  const withErrors=TASKS.filter(t=>t.marking&&t.marking.saved&&t.marking.wrongQ>0);
+  const withErrors=TASKS.filter(t=>t.marking&&t.marking.saved&&t.marking.wrongQ>0&&!isHidden(t));
   const bySubject={};
   withErrors.forEach(t=>{ if(!bySubject[t.subject]) bySubject[t.subject]=[]; bySubject[t.subject].push(t); });
   const subjectSections=Object.entries(bySubject).map(([subj,tasks])=>{
