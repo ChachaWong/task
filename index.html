@@ -58,15 +58,15 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
 .date-detail-title{font-size:13px;font-weight:700;color:var(--text-2);}
 .date-detail-close{font-size:12px;color:var(--text-3);cursor:pointer;padding:4px 8px;border-radius:6px;}
 .date-detail-close:hover{background:var(--bg);color:var(--text);}
-.month-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;}
-.month-day-header{font-size:11px;font-weight:700;letter-spacing:0.04em;text-transform:uppercase;color:var(--text-3);text-align:center;padding-bottom:6px;}
-.month-day-cell{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:6px;min-height:74px;cursor:pointer;transition:all 0.15s;display:flex;flex-direction:column;}
-.month-day-cell:hover{border-color:var(--accent);}
+.month-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:10px;}
+.month-day-header{font-size:12px;font-weight:700;letter-spacing:0.04em;text-transform:uppercase;color:var(--text-3);text-align:center;padding-bottom:10px;}
+.month-day-cell{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:10px;min-height:128px;cursor:pointer;transition:all 0.15s;display:flex;flex-direction:column;}
+.month-day-cell:hover{border-color:var(--accent);box-shadow:0 2px 8px rgba(67,97,238,0.1);}
 .month-day-cell.is-today{border-color:var(--accent);background:var(--accent-bg);}
 .month-day-cell.other-month{opacity:0.35;}
-.month-day-num{font-size:12px;font-weight:700;font-family:'DM Mono',monospace;color:var(--text);margin-bottom:3px;}
-.month-day-item{font-size:10px;padding:1px 5px;border-radius:4px;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.month-day-more{font-size:10px;color:var(--text-3);}
+.month-day-num{font-size:15px;font-weight:700;font-family:'DM Mono',monospace;color:var(--text);margin-bottom:6px;}
+.month-day-item{font-size:11.5px;padding:3px 7px;border-radius:5px;margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.month-day-more{font-size:11px;color:var(--text-3);margin-top:1px;}
 .stat-card{background:var(--surface);border:2px solid var(--border);border-radius:var(--radius);padding:16px 18px;cursor:pointer;transition:all 0.2s;user-select:none;box-shadow:0 1px 4px rgba(67,97,238,0.06);}
 .stat-card:hover{border-color:var(--accent);transform:translateY(-2px);box-shadow:0 4px 16px rgba(67,97,238,0.12);}
 .stat-card.active{border-color:var(--accent);background:linear-gradient(135deg,var(--accent-bg),#fff);box-shadow:0 4px 16px rgba(67,97,238,0.15);}
@@ -231,7 +231,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
   .action-bar{gap:6px;}.abar-btn{padding:7px 10px;font-size:11px;}.abar-divider{display:none;}
   .main{padding:12px 10px;}.stats-row{grid-template-columns:repeat(2,1fr);gap:8px;}.stat-value{font-size:30px;}
   .week-day-label{font-size:9px;}.week-day-num{font-size:14px;}.week-day-cell{padding:6px 2px;}
-  .month-day-cell{min-height:54px;padding:4px;}.month-day-item{font-size:9px;}.month-day-num{font-size:11px;}
+  .month-grid{gap:5px;}.month-day-cell{min-height:64px;padding:5px;border-radius:8px;}.month-day-item{font-size:9.5px;padding:2px 5px;}.month-day-num{font-size:12px;margin-bottom:3px;}.month-day-header{font-size:10px;}
   .task-main{padding:10px 12px;gap:8px;flex-wrap:wrap;align-items:center;}.task-name{font-size:15px;white-space:normal;overflow:visible;text-overflow:initial;width:100%;}
   .task-info{min-width:0;flex:1 1 auto;}
   .task-meta-row{flex-wrap:wrap;gap:5px;row-gap:6px;}
@@ -1410,7 +1410,12 @@ let monthViewDate = new Date(today); // 当前月视图显示的月份(取这个
 
 function openMonthView(){
   monthViewDate = new Date(today);
-  showFullPage('📅 Calendar', `<div id="monthViewBody"></div>`);
+  // 月历格子多、信息密度高，不用showFullPage默认的860px窄容器(那是给Stats/ErrorBook这种文字阅读型页面用的)，
+  // 这里直接操作overlay自建一个更宽的容器，让7列格子有足够空间显示得大气、不挤
+  let overlay=document.getElementById('fullPageOverlay');
+  if(!overlay){ overlay=document.createElement('div'); overlay.id='fullPageOverlay'; overlay.style.cssText='position:fixed;inset:0;background:var(--bg);z-index:100;overflow-y:auto;'; document.body.appendChild(overlay); }
+  overlay.innerHTML=`<div style="background:var(--surface);border-bottom:1px solid var(--border);padding:0 24px;height:56px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:10"><span style="font-size:15px;font-weight:700">📅 Calendar</span><button onclick="closeFullPage()" style="padding:7px 14px;background:var(--bg);border:1px solid var(--border2);border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif">← Back</button></div><div style="max-width:1300px;margin:0 auto;padding:24px 28px"><div id="monthViewBody"></div></div>`;
+  overlay.style.display='block';
   renderMonthGrid();
 }
 
@@ -1438,7 +1443,7 @@ function renderMonthGrid(){
     const isToday = dStr===todayStr;
     const { realTasks, realReviews, predicted } = getItemsForDate(dStr);
     const allItems = [...realTasks, ...realReviews, ...predicted];
-    const maxShow = 3;
+    const maxShow = 4;
     const itemTags = allItems.slice(0,maxShow).map(it=>{
       const isReview = !it.type; // review对象没有type字段，task/class对象有
       const label = isReview ? '📌 '+it.name : (it.type==='class'?'🏫 ':'📝 ')+it.name;
@@ -1456,10 +1461,10 @@ function renderMonthGrid(){
     </div>`;
   }
 
-  container.innerHTML = `<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
-    <button class="week-nav-btn" onclick="shiftMonth(-1)">‹</button>
-    <div style="font-size:16px;font-weight:700">${monthLabel}</div>
-    <button class="week-nav-btn" onclick="shiftMonth(1)">›</button>
+  container.innerHTML = `<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px">
+    <button class="week-nav-btn" style="width:38px;height:38px;font-size:16px" onclick="shiftMonth(-1)">‹</button>
+    <div style="font-size:20px;font-weight:700">${monthLabel}</div>
+    <button class="week-nav-btn" style="width:38px;height:38px;font-size:16px" onclick="shiftMonth(1)">›</button>
   </div>
   <div class="month-grid">${dayHeaders}${cells}</div>`;
 }
