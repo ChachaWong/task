@@ -940,7 +940,12 @@ function expandedHTML(t){
       </div>
     </div>`;
   }
-  html+=`<div style="padding-top:6px"><button onclick="deleteTask('${t.id}',event)" style="padding:8px 16px;background:var(--red-bg);color:var(--red);border:1px solid #FECACA;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif">🗑 Delete this record</button></div>`;
+  html+=`<div style="margin-top:10px">
+    <div style="font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;color:var(--text-3);margin-bottom:5px">Notes</div>
+    <textarea id="task-notes-${t.id}" placeholder="e.g. struggled with fractions, ask teacher about homework format…" style="width:100%;height:60px;padding:8px 10px;border:1px solid var(--border2);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;resize:vertical">${t.notes||''}</textarea>
+    <button onclick="saveTaskNotes('${t.id}')" style="margin-top:6px;padding:8px 16px;background:var(--accent);color:white;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif">💾 Save notes</button>
+  </div>`;
+  html+=`<div style="padding-top:10px"><button onclick="deleteTask('${t.id}',event)" style="padding:8px 16px;background:var(--red-bg);color:var(--red);border:1px solid #FECACA;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif">🗑 Delete this record</button></div>`;
   return html;
 }
 function reviewCardHTML(r){
@@ -997,7 +1002,8 @@ function reviewSubHTML(r, prefix){
     </div>`:''}
     <div style="margin-bottom:12px">
       <div style="font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;color:var(--text-3);margin-bottom:5px">Notes / next steps</div>
-      <textarea id="${prefix}-notes-${id}" ${isDone?'disabled':''} placeholder="e.g. Done Q1–Q3, next time start from Q4" style="width:100%;height:60px;padding:8px 10px;border:1px solid var(--border2);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;resize:vertical;${isDone?'background:var(--bg);color:var(--text-3)':''}">${r.notes||''}</textarea>
+      <textarea id="${prefix}-notes-${id}" placeholder="e.g. Done Q1–Q3, next time start from Q4" style="width:100%;height:60px;padding:8px 10px;border:1px solid var(--border2);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;resize:vertical">${r.notes||''}</textarea>
+      <button onclick="saveReviewNotes('${id}','${prefix}')" style="margin-top:6px;padding:7px 14px;background:var(--accent);color:white;border:none;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif">💾 Save notes</button>
     </div>
     ${!isDone?`
     <div style="display:flex;gap:6px;background:var(--bg);padding:4px;border-radius:10px;width:fit-content;margin-bottom:12px">
@@ -1264,6 +1270,21 @@ function undoReview(id){
 function updateReviewProgress(id,prefix){
   const r=REVIEWS.find(rv=>rv.feishuId===id); if(!r) return;
   r.reviewedCount=parseInt(document.getElementById(prefix+'-rcount-'+id)?.value)||0;
+}
+
+function saveReviewNotes(id, prefix){
+  const r=REVIEWS.find(rv=>rv.feishuId===id); if(!r) return;
+  const notesEl=document.getElementById(prefix+'-notes-'+id);
+  if(notesEl) r.notes=notesEl.value;
+  feishuUpdateReviewNotes(r).then(()=>showSyncToast('✓ Notes saved to Feishu'));
+}
+
+// ── 同步Review的Notes修改到飞书(独立于完成状态,随时可保存) ──
+async function feishuUpdateReviewNotes(r){
+  if(!r.feishuId) return;
+  const res = await apiCall(`/reviews/${r.feishuId}`, 'PATCH', { 'Review Notes': r.notes || '' });
+  console.log('feishuUpdateReviewNotes:', JSON.stringify(res));
+  return res;
 }
 
 function reviewBtnRow(id,state){
@@ -1687,6 +1708,22 @@ function undoTask(id){
   feishuUpdateStatus(task, 'Not Started', 0).then(()=>showSyncToast('✓ Reverted to pending'));
   renderContent();
 }
+function saveTaskNotes(id){
+  const task=TASKS.find(t=>t.id===id); if(!task) return;
+  const notesEl=document.getElementById('task-notes-'+id);
+  if(notesEl) task.notes=notesEl.value;
+  feishuUpdateTaskNotes(task).then(()=>showSyncToast('✓ Notes saved to Feishu'));
+  renderContent();
+}
+
+// ── 同步Task的Notes修改到飞书 ──
+async function feishuUpdateTaskNotes(task){
+  if(!task.feishuId) return;
+  const res = await apiCall(`/tasks/${task.feishuId}`, 'PATCH', { 'Notes': task.notes || '' });
+  console.log('feishuUpdateTaskNotes:', JSON.stringify(res));
+  return res;
+}
+
 function saveClassDetails(id){
   const task=TASKS.find(t=>t.id===id); if(!task) return;
   const notesEl=document.getElementById('cls-notes-'+id);
@@ -1697,7 +1734,22 @@ function saveClassDetails(id){
   if(priceEl) task.pricePerLesson=parseFloat(priceEl.value)||0;
   if(pkgEl) task.packageTotal=parseFloat(pkgEl.value)||0;
   if(lessonsEl) task.totalLessons=parseInt(lessonsEl.value)||0;
+  feishuUpdateClassDetails(task).then(()=>showSyncToast('✓ Saved to Feishu'));
   renderContent();
+}
+
+// ── 同步Class的Notes/价格/课时数修改到飞书 ──
+async function feishuUpdateClassDetails(task){
+  if(!task.feishuId) return;
+  const fields = {
+    'Notes': task.classNotes || '',
+    'Price Per Lesson': task.pricePerLesson || 0,
+    'Package Total': task.packageTotal || 0,
+    'Total Lessons': task.totalLessons || 0,
+  };
+  const res = await apiCall(`/classes/${task.feishuId}`, 'PATCH', fields);
+  console.log('feishuUpdateClassDetails:', JSON.stringify(res));
+  return res;
 }
 
 // ── MARKING ──
@@ -2541,6 +2593,7 @@ function feishuRecordToTask(rec){
     deleted: !!f['Deleted'],
     completedAt: f['Completed At'] || null,
     gapSecs: (f['Gap']!=null) ? f['Gap']*60 : null,
+    notes: f['Notes'] || '',
     pauseCount: Number(f['Pause Count']) || 0,
     restSecs: Number(f['Rest Time']) || 0,
   };
