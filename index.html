@@ -243,9 +243,32 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
   .modal-overlay{padding:0;align-items:flex-end;}.modal{border-radius:16px 16px 0 0;max-width:100%;max-height:92vh;padding:20px 16px;}
   .marking-fields{gap:8px;}.mf input{width:60px;}.sess-log{padding:8px 12px;}
 }
+
+/* ── 打印功能 ── */
+.print-btn{padding:6px 12px;border:1px solid var(--border2);background:var(--surface);border-radius:7px;font-size:12px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;color:var(--text-2);display:inline-flex;align-items:center;gap:5px;transition:all 0.15s;}
+.print-btn:hover{background:var(--border);color:var(--text);}
+#printContainer{display:none;} /* 屏幕上永远不显示，只在打印时通过@media print规则现身 */
+.print-section-title{font-size:11px;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;color:#666;margin:14px 0 6px;border-bottom:1px solid #ccc;padding-bottom:3px;}
+.print-row{display:flex;align-items:baseline;gap:8px;padding:4px 0;font-size:13px;border-bottom:1px solid #eee;}
+.print-check{width:14px;flex-shrink:0;font-weight:700;}
+.print-check.done{color:#15803D;}
+.print-check.pending{color:#999;}
+.print-name{flex:1;}
+.print-name.done{text-decoration:line-through;color:#888;}
+.print-subject{font-size:11px;color:#666;flex-shrink:0;}
+.print-day-block{margin-bottom:18px;}
+
+@media print{
+  body > *:not(#printContainer){display:none !important;}
+  #printContainer{display:block !important;}
+  #printContainer{font-family:'DM Sans',sans-serif;color:#1C2040;padding:0;}
+  #printContainer h1{font-size:18px;margin-bottom:2px;}
+  #printContainer .print-meta{font-size:11px;color:#666;margin-bottom:14px;}
+}
 </style>
 </head>
 <body>
+<div id="printContainer"></div>
 <div class="main">
   <div class="action-bar">
     <button class="abar-btn primary" onclick="openModal('addTaskModal')">＋ Add Task</button>
@@ -264,6 +287,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
     <div class="week-days" id="weekDays"></div>
     <button class="week-nav-btn" onclick="shiftWeek(1)">›</button>
     <button class="calendar-btn" onclick="openMonthView()" title="Month view">📅</button>
+    <button class="calendar-btn" onclick="printWeek()" title="Print this week">🖨</button>
   </div>
   <div id="dateDetailPanel"></div>
   <div class="stats-row">
@@ -998,10 +1022,63 @@ function renderDateDetailPanel(){
   panel.innerHTML = `<div class="date-detail-panel">
     <div class="date-detail-header">
       <div class="date-detail-title">${dateLabel} · ${totalCount} item${totalCount!==1?'s':''}</div>
-      <div class="date-detail-close" onclick="onWeekDayClick('${fmtISO(today)}')">✕ Close</div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <button class="print-btn" onclick="printDate('${dStr}')">🖨 Print</button>
+        <div class="date-detail-close" onclick="onWeekDayClick('${fmtISO(today)}')">✕ Close</div>
+      </div>
     </div>
     ${body}
   </div>`;
+}
+
+// ════════════════════════════════════════════
+// ── 打印功能 ──
+// ════════════════════════════════════════════
+// 把一条task/class/review渲染成简洁的打印清单行：只要名字+学科+完成状态，不要正确率/时长等细节
+function buildPrintRowHTML(item){
+  const isReview = !item.type; // review对象没有type字段，task/class对象有
+  const isDone = isReview ? item.done : item.status==='done';
+  const icon = isReview ? '📌' : (item.type==='class' ? '🏫' : '📝');
+  const subjLabel = (item.subjects&&item.subjects.length) ? item.subjects.join('/') : (item.subject||'');
+  return `<div class="print-row">
+    <span class="print-check ${isDone?'done':'pending'}">${isDone?'✓':'☐'}</span>
+    <span class="print-name ${isDone?'done':''}">${icon} ${item.name}</span>
+    <span class="print-subject">${subjLabel}</span>
+  </div>`;
+}
+// 组装某一天的打印清单区块(标题+当天所有task/class/review的行，不含predicted —— 打印的是确实发生/安排好的事，不打印还没生成的推测项)
+function buildPrintDayBlockHTML(dStr){
+  const { realTasks, realReviews } = getItemsForDate(dStr);
+  const dateObj = new Date(dStr+'T00:00:00');
+  const dayLabel = dateObj.toLocaleDateString('en-AU',{weekday:'long',day:'numeric',month:'short'});
+  const allItems = [...realTasks, ...realReviews];
+  if(!allItems.length){
+    return `<div class="print-day-block"><div class="print-section-title">${dayLabel}</div><div style="font-size:12px;color:#999;padding:6px 0">Nothing scheduled.</div></div>`;
+  }
+  // 未完成排前面，完成的排后面，跟屏幕上详情面板的排序逻辑一致
+  const sorted = [...allItems].sort((a,b)=>{
+    const aDone = a.type ? a.status==='done' : a.done;
+    const bDone = b.type ? b.status==='done' : b.done;
+    return (aDone?1:0)-(bDone?1:0);
+  });
+  return `<div class="print-day-block"><div class="print-section-title">${dayLabel}</div>${sorted.map(buildPrintRowHTML).join('')}</div>`;
+}
+function printDate(dStr){
+  const dateObj = new Date(dStr+'T00:00:00');
+  const dateLabel = dateObj.toLocaleDateString('en-AU',{weekday:'long',day:'numeric',month:'short',year:'numeric'});
+  const container = document.getElementById('printContainer');
+  container.innerHTML = `<h1>Henry's Homework</h1><div class="print-meta">${dateLabel}</div>${buildPrintDayBlockHTML(dStr)}`;
+  window.print();
+}
+function printWeek(){
+  const monday = getMonday(weekAnchorDate);
+  const sunday = new Date(monday); sunday.setDate(sunday.getDate()+6);
+  const rangeLabel = `${monday.toLocaleDateString('en-AU',{day:'numeric',month:'short'})} – ${sunday.toLocaleDateString('en-AU',{day:'numeric',month:'short',year:'numeric'})}`;
+  let blocksHTML = '';
+  for(let i=0;i<7;i++){ const d=new Date(monday); d.setDate(d.getDate()+i); blocksHTML += buildPrintDayBlockHTML(fmtISO(d)); }
+  const container = document.getElementById('printContainer');
+  container.innerHTML = `<h1>Henry's Homework — Weekly Summary</h1><div class="print-meta">${rangeLabel}</div>${blocksHTML}`;
+  window.print();
 }
 
 function renderContent(){
@@ -2524,7 +2601,7 @@ function renderRecurringList(){
             <div style="display:flex;flex-direction:column;gap:3px"><span style="font-size:10px;color:var(--text-3)">Lessons in package</span><input type="number" value="${r.totalLessons||''}" id="ri-lessons-${r.id}" placeholder="e.g. 10" min="0" style="padding:6px 8px;border:1px solid var(--border2);border-radius:6px;font-size:13px;font-family:'DM Mono',monospace;width:100px"></div>
           </div>
           <div style="display:flex;flex-direction:column;gap:3px;margin-bottom:8px"><span style="font-size:10px;color:var(--text-3)">Notes (teacher, payment, etc.)</span><textarea id="ri-notes-${r.id}" placeholder="e.g. Teacher: Ms Li, paid until July" style="padding:6px 8px;border:1px solid var(--border2);border-radius:6px;font-size:13px;font-family:'DM Sans',sans-serif;width:100%;max-width:400px;height:50px">${r.classNotes||''}</textarea></div>`:''}
-          <button class="ri-btn" style="background:var(--accent);color:white;border-color:var(--accent)" onclick="saveRecurFull('${r.id}')">💾 Save All Changes</button>
+          <button class="ri-btn" id="ri-save-${r.id}" style="background:var(--accent);color:white;border-color:var(--accent)" onclick="saveRecurFull('${r.id}')">💾 Save All Changes</button>
         </div>
         <div>
           <div style="font-size:10px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:var(--text-3);margin-bottom:6px">Add Skip Period</div>
@@ -2584,6 +2661,10 @@ function saveRecurDates(id){ const r=RECURRING.find(r=>r.id===id); if(!r) return
 // 完整保存：Frequency, Days, Estimate, Points, Start/End Date，同步到飞书Recurring表
 function saveRecurFull(id){
   const r=RECURRING.find(r=>r.id===id); if(!r) return;
+  const snapshot = {...r}; // 保存修改前的快照，飞书写入失败时用它回滚，避免本地内存"看起来改了"但飞书其实没存上的数据不一致
+  const btn = document.getElementById('ri-save-'+id);
+  if(btn){ btn.disabled=true; btn.textContent='Saving…'; }
+
   const nameEl=document.getElementById('ri-name-'+id);
   const freqEl=document.getElementById('ri-freq-'+id);
   const daysEl=document.getElementById('ri-days-'+id);
@@ -2618,9 +2699,27 @@ function saveRecurFull(id){
     if(notesEl)     r.classNotes     = notesEl.value.trim();
   }
 
-  // 同步到飞书：更新这条规则记录(不新建)
-  feishuUpdateRecurringFull(r).then(()=>showSyncToast('✓ Rule updated in Feishu'));
-  renderRecurringList();
+  // 同步到飞书：更新这条规则记录(不新建)。根据飞书的真实返回结果判断成功/失败，
+  // 而不是无条件假设成功 —— apiCall网络层失败会返回null，飞书业务层报错会返回带error字段的对象，
+  // 这两种都不该提示"保存成功"，否则用户会以为改动已经生效但实际上飞书那边什么都没变。
+  feishuUpdateRecurringFull(r).then(res=>{
+    const ok = res && !res.error && !res.code; // 飞书出错时通常带error或非0的code字段
+    if(ok){
+      showSyncToast('✓ Rule updated in Feishu');
+      if(btn){ btn.disabled=false; btn.textContent='✓ Saved'; setTimeout(()=>{ if(document.getElementById('ri-save-'+id)) renderRecurringList(); },900); }
+      else renderRecurringList();
+    } else {
+      console.error('saveRecurFull failed, Feishu response:', JSON.stringify(res));
+      Object.assign(r, snapshot); // 飞书没存上，本地也回滚回去，避免界面显示跟飞书实际数据不一致
+      showSyncToast('⚠ Failed to save — check console / try again', true);
+      renderRecurringList();
+    }
+  }).catch(e=>{
+    console.error('saveRecurFull error:', e);
+    Object.assign(r, snapshot);
+    showSyncToast('⚠ Failed to save — check your connection', true);
+    renderRecurringList();
+  });
 }
 function addSkip(id){
   const r=RECURRING.find(r=>r.id===id); if(!r) return;
