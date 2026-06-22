@@ -2506,6 +2506,10 @@ async function addTask(){
     let days=[];
     if(recur==='weekly') days=getSelectedDays('at-day-picker');
     if(recur==='monthly'){ const md=document.getElementById('at-monthday').value; if(md) days=[md]; }
+    if((recur==='weekly'||recur==='monthly') && !days.length){
+      alert(recur==='weekly' ? 'Please select at least one day of the week for this weekly task.' : 'Please enter a day of the month for this monthly task.');
+      return;
+    }
     const startDate=document.getElementById('at-start-date').value||dateVal;
     const endDate=document.getElementById('at-end-date').value||'';
     const newRecur={id:'R'+String(recurIdCounter++).padStart(3,'0'),type:'task',name:details,subject:subjectLabel,subjects:atSubject,details,estSecs,basePoints,freq:recur,days,startDate,endDate,active:true,skipDates:[]};
@@ -2565,6 +2569,10 @@ async function addClass(){
     let days=[];
     if(recur==='weekly') days=getSelectedDays('ac-day-picker');
     if(recur==='monthly'){ const md=document.getElementById('ac-monthday').value; if(md) days=[md]; }
+    if((recur==='weekly'||recur==='monthly') && !days.length){
+      alert(recur==='weekly' ? 'Please select at least one day of the week for this weekly class.' : 'Please enter a day of the month for this monthly class.');
+      return;
+    }
     const startDate=document.getElementById('ac-start-date').value||fmtISO(today);
     const endDate=document.getElementById('ac-end-date').value||'';
     const newRecurC={id:'R'+String(recurIdCounter++).padStart(3,'0'),type:'class',name,subject:subjectLabel,subjects:types,startTime,endTime,location,basePoints,freq:recur,days,startDate,endDate,active:true,skipDates:[],pricePerLesson,packageTotal,totalLessons,classNotes};
@@ -2763,13 +2771,20 @@ function saveRecurDates(id){ const r=RECURRING.find(r=>r.id===id); if(!r) return
 // 完整保存：Frequency, Days, Estimate, Points, Start/End Date，同步到飞书Recurring表
 function saveRecurFull(id){
   const r=RECURRING.find(r=>r.id===id); if(!r) return;
+  const freqEl=document.getElementById('ri-freq-'+id);
+  const daysEl=document.getElementById('ri-days-'+id);
+  const newFreq = freqEl.value;
+  const newDays = daysEl.value.split(',').map(s=>s.trim()).filter(Boolean);
+  if((newFreq==='weekly'||newFreq==='monthly') && !newDays.length){
+    alert(newFreq==='weekly' ? 'Please enter at least one day of the week (e.g. Mon,Wed,Fri).' : 'Please enter a day of the month (e.g. 15).');
+    return;
+  }
+
   const snapshot = {...r}; // 保存修改前的快照，飞书写入失败时用它回滚，避免本地内存"看起来改了"但飞书其实没存上的数据不一致
   const btn = document.getElementById('ri-save-'+id);
   if(btn){ btn.disabled=true; btn.textContent='Saving…'; }
 
   const nameEl=document.getElementById('ri-name-'+id);
-  const freqEl=document.getElementById('ri-freq-'+id);
-  const daysEl=document.getElementById('ri-days-'+id);
   const estEl=document.getElementById('ri-est-'+id);
   const ptsEl=document.getElementById('ri-points-'+id);
   const startEl=document.getElementById('ri-start-'+id);
@@ -2777,8 +2792,8 @@ function saveRecurFull(id){
 
   if(nameEl && nameEl.value.trim()) r.name = nameEl.value.trim();
   if(recurEditSubjects.length){ r.subjects = [...recurEditSubjects]; r.subject = recurEditSubjects.join('/'); }
-  r.freq = freqEl.value;
-  r.days = daysEl.value.split(',').map(s=>s.trim()).filter(Boolean);
+  r.freq = newFreq;
+  r.days = newDays;
   r.estSecs = estEl.value ? parseInt(estEl.value)*60 : null;
   r.basePoints = ptsEl.value ? parseInt(ptsEl.value) : 0;
   r.startDate = startEl.value || r.startDate;
