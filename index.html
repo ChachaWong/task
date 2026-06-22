@@ -1322,12 +1322,18 @@ function classCardHTML(t){
         <div class="task-name">🏫 ${t.name}${timeStr?` <span style="font-size:13px;font-weight:600;color:var(--orange);font-family:'DM Mono',monospace;text-decoration:none">· ${timeStr}</span>`:''}</div>
         <div class="task-meta-row">${pillGroup(t.subjects||t.subject)}<span class="task-date"><span style="margin-right:2px">📅</span>${fmt(t.date)}</span>${isOverdue?`<span style="${overdueAgoStyle}">${overdueAgo.text}</span>`:''}${priceShort?`<span class="est-tag"><span style="margin-right:2px">💰</span>${priceShort}</span>`:''}${t.location?`<span class="class-loc-tag">📍${t.location}</span>`:''}${isSkipped?'<span class="review-tag" style="background:var(--amber-bg);color:var(--amber)">⏭ Skipped</span>':''}${isRescheduled?'<span class="review-tag" style="background:var(--accent-bg);color:var(--accent)">↻ Rescheduled</span>':''}</div>
       </div>
-      <div class="task-right">${t.basePoints?`<span class="pts-tag">+${t.basePoints}pts</span>`:''}<span class="chevron ${exp?'open':''}">▾</span></div>
+      <div class="task-right">${isDone&&t.totalSecs?`<span class="task-duration">${durFmt(t.totalSecs)}</span>`:''}${t.basePoints?`<span class="pts-tag">+${t.basePoints}pts</span>`:''}<span class="chevron ${exp?'open':''}">▾</span></div>
     </div>
     ${exp?`<div class="task-expanded open"><div style="padding:16px 18px;background:var(--bg);display:flex;flex-direction:column;gap:14px">
-      <div>
-        <div style="font-size:10px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:var(--text-3);margin-bottom:6px">Class Name</div>
-        <input type="text" id="cls-name-${t.id}" value="${(t.name||'').replace(/"/g,'&quot;')}" style="width:100%;padding:8px 10px;border:1px solid var(--border2);border-radius:8px;font-size:14px;font-family:'DM Sans',sans-serif">
+      <div style="display:flex;gap:10px;align-items:flex-end">
+        <div style="flex:1">
+          <div style="font-size:10px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:var(--text-3);margin-bottom:6px">Class Name</div>
+          <input type="text" id="cls-name-${t.id}" value="${(t.name||'').replace(/"/g,'&quot;')}" style="width:100%;padding:8px 10px;border:1px solid var(--border2);border-radius:8px;font-size:14px;font-family:'DM Sans',sans-serif">
+        </div>
+        <div style="width:80px">
+          <div style="font-size:10px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:var(--text-3);margin-bottom:6px">Points</div>
+          <input type="number" id="cls-points-${t.id}" value="${t.basePoints||''}" min="0" placeholder="0" style="width:100%;padding:8px 10px;border:1px solid var(--border2);border-radius:8px;font-size:14px;font-family:'DM Mono',monospace">
+        </div>
       </div>
       <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px 14px;display:flex;flex-direction:column;gap:6px">
         ${priceStr?`<div style="font-size:13px;color:var(--accent);font-weight:600">💰 ${priceStr}</div>`:'<div style="font-size:13px;color:var(--text-3)">💰 No price set</div>'}
@@ -1361,9 +1367,15 @@ function classCardHTML(t){
 function expandedHTML(t){
   const isDone=t.status==='done', tst=ts(t.id);
   let html='';
-  html+=`<div style="margin-bottom:12px">
-    <div style="font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;color:var(--text-3);margin-bottom:5px">Task Details</div>
-    <input type="text" id="task-name-${t.id}" value="${(t.name||'').replace(/"/g,'&quot;')}" style="width:100%;padding:8px 10px;border:1px solid var(--border2);border-radius:8px;font-size:14px;font-family:'DM Sans',sans-serif">
+  html+=`<div style="margin-bottom:12px;display:flex;gap:10px;align-items:flex-end">
+    <div style="flex:1">
+      <div style="font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;color:var(--text-3);margin-bottom:5px">Task Details</div>
+      <input type="text" id="task-name-${t.id}" value="${(t.name||'').replace(/"/g,'&quot;')}" style="width:100%;padding:8px 10px;border:1px solid var(--border2);border-radius:8px;font-size:14px;font-family:'DM Sans',sans-serif">
+    </div>
+    <div style="width:80px">
+      <div style="font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;color:var(--text-3);margin-bottom:5px">Points</div>
+      <input type="number" id="task-points-${t.id}" value="${t.basePoints||''}" min="0" placeholder="0" style="width:100%;padding:8px 10px;border:1px solid var(--border2);border-radius:8px;font-size:14px;font-family:'DM Mono',monospace">
+    </div>
   </div>`;
   if(!isDone){
     const tmode = (taskTimerMode[t.id]||'stopwatch');
@@ -1499,6 +1511,16 @@ function reviewSubHTML(r, prefix){
   const accColor=pct===null?'var(--text-3)':pct>=90?'var(--green)':pct>=70?'var(--amber)':'var(--red)';
   const rmode=reviewTimerMode[id]||'stopwatch';
   return `<div class="review-sub" id="rsub-${id}">
+    <div style="margin-bottom:12px;display:flex;gap:10px;align-items:flex-end">
+      <div style="flex:1">
+        <div style="font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;color:var(--text-3);margin-bottom:5px">Review Details</div>
+        <input type="text" id="${prefix}-name-${id}" value="${(r.name||'').replace(/"/g,'&quot;')}" style="width:100%;padding:8px 10px;border:1px solid var(--border2);border-radius:8px;font-size:14px;font-family:'DM Sans',sans-serif">
+      </div>
+      <div style="width:80px">
+        <div style="font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;color:var(--text-3);margin-bottom:5px">Points</div>
+        <input type="number" id="${prefix}-points-${id}" value="${r.points||''}" min="0" placeholder="0" style="width:100%;padding:8px 10px;border:1px solid var(--border2);border-radius:8px;font-size:14px;font-family:'DM Mono',monospace">
+      </div>
+    </div>
     <div class="review-sub-title">
       <span>📌 Review &nbsp;<span style="font-size:11px;font-weight:400;color:${accColor}">${pct!==null?pct+'% accuracy':''}</span></span>
       ${isDone?'<span class="review-done-badge">✓ Complete</span>':''}
@@ -1513,7 +1535,7 @@ function reviewSubHTML(r, prefix){
     <div style="margin-bottom:12px">
       <div style="font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;color:var(--text-3);margin-bottom:5px">Notes / next steps</div>
       <textarea id="${prefix}-notes-${id}" placeholder="e.g. Done Q1–Q3, next time start from Q4" style="width:100%;height:60px;padding:8px 10px;border:1px solid var(--border2);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;resize:vertical">${r.notes||''}</textarea>
-      <button onclick="saveReviewNotes('${id}','${prefix}')" style="margin-top:6px;padding:7px 14px;background:var(--accent);color:white;border:none;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif">💾 Save notes</button>
+      <button onclick="saveReviewDetails('${id}','${prefix}')" style="margin-top:6px;padding:7px 14px;background:var(--accent);color:white;border:none;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif">💾 Save changes</button>
     </div>
     ${!isDone?`
     <div style="display:flex;gap:6px;background:var(--bg);padding:4px;border-radius:10px;width:fit-content;margin-bottom:12px">
@@ -1882,18 +1904,28 @@ async function feishuUpdateReviewProgress(r){
   return res;
 }
 
-function saveReviewNotes(id, prefix){
+function saveReviewDetails(id, prefix){
   const r=REVIEWS.find(rv=>rv.feishuId===id); if(!r) return;
+  const snapshot = {name:r.name, notes:r.notes, points:r.points}; // 失败时回滚，避免本地显示"已改"但飞书没存上
+  const nameEl=document.getElementById(prefix+'-name-'+id);
   const notesEl=document.getElementById(prefix+'-notes-'+id);
+  const pointsEl=document.getElementById(prefix+'-points-'+id);
+  if(nameEl && nameEl.value.trim()) r.name=nameEl.value.trim();
   if(notesEl) r.notes=notesEl.value;
-  feishuUpdateReviewNotes(r).then(()=>showSyncToast('✓ Notes saved to Feishu'));
+  if(pointsEl) r.points=parseInt(pointsEl.value)||0;
+  feishuUpdateReviewDetails(r).then(res=>{
+    if(isFeishuUpdateSuccess(res)) showSyncToast('✓ Saved to Feishu');
+    else { console.error('saveReviewDetails failed, Feishu response:', JSON.stringify(res)); Object.assign(r, snapshot); showSyncToast('⚠ Failed to save — please retry', true); }
+    renderContent();
+  });
+  renderContent();
 }
 
-// ── 同步Review的Notes修改到飞书(独立于完成状态,随时可保存) ──
-async function feishuUpdateReviewNotes(r){
-  if(!r.feishuId) return;
-  const res = await apiCall(`/reviews/${r.feishuId}`, 'PATCH', { 'Review Notes': r.notes || '' });
-  console.log('feishuUpdateReviewNotes:', JSON.stringify(res));
+// ── 同步Review的名字/Notes/Points修改到飞书(独立于完成状态,随时可保存) ──
+async function feishuUpdateReviewDetails(r){
+  if(!r.feishuId) return null;
+  const res = await apiCall(`/reviews/${r.feishuId}`, 'PATCH', { 'Task Details': r.name, 'Review Notes': r.notes || '', 'Review Reward Points': r.points || 0 });
+  console.log('feishuUpdateReviewDetails:', JSON.stringify(res));
   return res;
 }
 
@@ -2360,11 +2392,13 @@ function undoTask(id){
 }
 function saveTaskDetails(id){
   const task=TASKS.find(t=>t.id===id); if(!task) return;
-  const snapshot = {name:task.name, notes:task.notes}; // 失败时回滚，避免本地显示"已改"但飞书没存上
+  const snapshot = {name:task.name, notes:task.notes, basePoints:task.basePoints}; // 失败时回滚，避免本地显示"已改"但飞书没存上
   const nameEl=document.getElementById('task-name-'+id);
   const notesEl=document.getElementById('task-notes-'+id);
+  const pointsEl=document.getElementById('task-points-'+id);
   if(nameEl && nameEl.value.trim()) task.name=nameEl.value.trim();
   if(notesEl) task.notes=notesEl.value;
+  if(pointsEl) task.basePoints=parseInt(pointsEl.value)||0;
   feishuUpdateTaskDetails(task).then(res=>{
     if(isFeishuUpdateSuccess(res)) showSyncToast('✓ Saved to Feishu');
     else { console.error('saveTaskDetails failed, Feishu response:', JSON.stringify(res)); Object.assign(task, snapshot); showSyncToast('⚠ Failed to save — please retry', true); }
@@ -2373,27 +2407,29 @@ function saveTaskDetails(id){
   renderContent();
 }
 
-// ── 同步Task的名字/Notes修改到飞书 ──
+// ── 同步Task的名字/Notes/Points修改到飞书 ──
 async function feishuUpdateTaskDetails(task){
   if(!task.feishuId) return null;
-  const res = await apiCall(`/tasks/${task.feishuId}`, 'PATCH', { [F_TASK.details]: task.name, 'Notes': task.notes || '' });
+  const res = await apiCall(`/tasks/${task.feishuId}`, 'PATCH', { [F_TASK.details]: task.name, 'Notes': task.notes || '', [F_TASK.points]: task.basePoints || 0 });
   console.log('feishuUpdateTaskDetails:', JSON.stringify(res));
   return res;
 }
 
 function saveClassDetails(id){
   const task=TASKS.find(t=>t.id===id); if(!task) return;
-  const snapshot = {name:task.name, classNotes:task.classNotes, pricePerLesson:task.pricePerLesson, packageTotal:task.packageTotal, totalLessons:task.totalLessons};
+  const snapshot = {name:task.name, classNotes:task.classNotes, pricePerLesson:task.pricePerLesson, packageTotal:task.packageTotal, totalLessons:task.totalLessons, basePoints:task.basePoints};
   const nameEl=document.getElementById('cls-name-'+id);
   const notesEl=document.getElementById('cls-notes-'+id);
   const priceEl=document.getElementById('cls-price-per-'+id);
   const pkgEl=document.getElementById('cls-pkg-'+id);
   const lessonsEl=document.getElementById('cls-lessons-'+id);
+  const pointsEl=document.getElementById('cls-points-'+id);
   if(nameEl && nameEl.value.trim()) task.name=nameEl.value.trim();
   if(notesEl) task.classNotes=notesEl.value;
   if(priceEl) task.pricePerLesson=parseFloat(priceEl.value)||0;
   if(pkgEl) task.packageTotal=parseFloat(pkgEl.value)||0;
   if(lessonsEl) task.totalLessons=parseInt(lessonsEl.value)||0;
+  if(pointsEl) task.basePoints=parseInt(pointsEl.value)||0;
   feishuUpdateClassDetails(task).then(res=>{
     if(isFeishuUpdateSuccess(res)) showSyncToast('✓ Saved to Feishu');
     else { console.error('saveClassDetails failed, Feishu response:', JSON.stringify(res)); Object.assign(task, snapshot); showSyncToast('⚠ Failed to save — please retry', true); }
@@ -2402,7 +2438,7 @@ function saveClassDetails(id){
   renderContent();
 }
 
-// ── 同步Class的名字/Notes/价格/课时数修改到飞书 ──
+// ── 同步Class的名字/Notes/价格/课时数/Points修改到飞书 ──
 async function feishuUpdateClassDetails(task){
   if(!task.feishuId) return null;
   const fields = {
@@ -2411,6 +2447,7 @@ async function feishuUpdateClassDetails(task){
     'Price Per Lesson': task.pricePerLesson || 0,
     'Package Total': task.packageTotal || 0,
     'Total Lessons': task.totalLessons || 0,
+    'Reward Points': task.basePoints || 0,
   };
   const res = await apiCall(`/classes/${task.feishuId}`, 'PATCH', fields);
   console.log('feishuUpdateClassDetails:', JSON.stringify(res));
