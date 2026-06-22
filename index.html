@@ -537,7 +537,6 @@ const DAY_MAP = {Mo:'Mon',Tu:'Tue',We:'Wed',Th:'Thu',Fr:'Fri',Sa:'Sat',Su:'Sun'}
 const today = new Date(); today.setHours(0,0,0,0);
 const fmt    = d => new Date(d).toLocaleDateString('en-AU',{day:'numeric',month:'short'});
 const fmtISO = d => { const dd=new Date(d); return dd.getFullYear()+'-'+String(dd.getMonth()+1).padStart(2,'0')+'-'+String(dd.getDate()).padStart(2,'0'); };
-function dAgo(n){ const d=new Date(today); d.setDate(d.getDate()-n); return d; }
 function daysAgoLabel(date){
   const d=new Date(date); d.setHours(0,0,0,0);
   const diff=Math.floor((today-d)/(1000*60*60*24));
@@ -551,30 +550,13 @@ function daysAgoLabel(date){
 // REVIEWS: 完全独立的数据源,不依附TASKS数组。每条记录只看自己的date和reviewStatus字段决定显示位置。
 let REVIEWS = [];
 
-let RECURRING = [
-  {id:'R001',type:'task',name:'Daily Reading',subject:'Reading',details:'Read for 20 minutes',estSecs:1200,basePoints:5,
-   freq:'daily',days:[],startDate:fmtISO(dAgo(10)),endDate:'',active:true,skipDates:[]},
-  {id:'R002',type:'class',name:'Piano Lesson',subject:'Piano',startTime:'16:00',endTime:'17:30',
-   location:'Chatswood',basePoints:5,pricePerLesson:80,totalLessons:0,packageTotal:0,classNotes:'Teacher: Ms Chen\nNext payment: July',freq:'weekly',days:['Tue','Thu'],startDate:fmtISO(dAgo(30)),endDate:'',active:true,skipDates:[]},
-];
-let recurIdCounter = 3;
+// 不再使用硬编码演示数据 —— 页面加载时这两个数组先是空的，loadAllDataFromFeishu()会从飞书读取真实数据填充进来。
+// 这意味着飞书数据加载完成前(通常一两秒)，主页面会短暂显示"无数据"的空状态，这是预期行为。
+let RECURRING = [];
+let recurIdCounter = 1;
 
-let TASKS = [
-  {id:'T001',type:'task',name:'Maths Worksheet Ch.5',subject:'Math',date:dAgo(3),status:'overdue',
-   estSecs:1800,basePoints:10,totalSecs:0,marking:null,sessions:[],review:null,recurId:null,feishuId:null},
-  {id:'T002',type:'task',name:'English Reading Response',subject:'Reading',date:dAgo(1),status:'done',
-   estSecs:1800,basePoints:10,totalSecs:1240,
-   marking:{totalQ:10,wrongQ:4,needReview:true,saved:true},
-   sessions:[{a:'Start',t:'Mon 15:00'},{a:'Finish',t:'Mon 15:40'},{a:'Done',t:'Mon 15:41'}],
-   review:{done:false,notes:'',reviewedCount:0,totalWrong:4,sessions:[],totalSecs:0,date:dAgo(1)},recurId:null,feishuId:null},
-  {id:'T003',type:'task',name:'Chinese Writing Practice',subject:'Writing',date:today,status:'pending',
-   estSecs:2700,basePoints:10,totalSecs:0,marking:null,sessions:[],review:null,recurId:null,feishuId:null},
-  {id:'T006',type:'task',name:'Spelling List 12',subject:'Reading',date:today,status:'done',
-   estSecs:900,basePoints:5,totalSecs:840,
-   marking:{totalQ:20,wrongQ:0,needReview:false,saved:true},
-   sessions:[{a:'Start',t:'Today 15:00'},{a:'Done',t:'Today 15:14'}],review:null,recurId:null,feishuId:null},
-];
-let taskIdCounter = 7;
+let TASKS = [];
+let taskIdCounter = 1;
 
 // 判断一条Recurring规则是否匹配某个指定日期(不局限于今天)。
 // 抽成公共函数,因为"今天该不该生成"(generateRecurring)和"日历上某天该预测什么"(日历功能)是同一套判断逻辑,
@@ -1871,9 +1853,31 @@ function undoReview(id){
   renderContent();
 }
 
+// 用一个全局对象记录每条review的防抖定时器，key是review的feishuId
+const reviewProgressSaveTimers = {};
 function updateReviewProgress(id,prefix){
   const r=REVIEWS.find(rv=>rv.feishuId===id); if(!r) return;
-  r.reviewedCount=parseInt(document.getElementById(prefix+'-rcount-'+id)?.value)||0;
+  const inputEl = document.getElementById(prefix+'-rcount-'+id);
+  const newVal = parseInt(inputEl?.value)||0;
+  r.reviewedCount = newVal;
+  // 防抖：停止输入约1秒后才真正写入飞书，避免每敲一个数字字符就发一次请求(复习进度是边做题边记的轻量操作,不需要额外点保存按钮)
+  if(reviewProgressSaveTimers[id]) clearTimeout(reviewProgressSaveTimers[id]);
+  reviewProgressSaveTimers[id] = setTimeout(()=>{
+    feishuUpdateReviewProgress(r).then(res=>{
+      if(!isFeishuUpdateSuccess(res)){
+        console.error('updateReviewProgress failed, Feishu response:', JSON.stringify(res));
+        showSyncToast('⚠ Failed to save review progress — please retry', true);
+      }
+    });
+  }, 1000);
+}
+
+// ── 同步Review的Reviewed Count到飞书(独立于完成状态,随时可保存,跟Notes一样的轻量更新) ──
+async function feishuUpdateReviewProgress(r){
+  if(!r.feishuId) return null;
+  const res = await apiCall(`/reviews/${r.feishuId}`, 'PATCH', { 'Reviewed Count': r.reviewedCount || 0 });
+  console.log('feishuUpdateReviewProgress:', JSON.stringify(res));
+  return res;
 }
 
 function saveReviewNotes(id, prefix){
@@ -1916,14 +1920,39 @@ function quickReviewDone(id,prefix){
   const m=parseInt(document.getElementById('rv-qm-'+id)?.value)||0;
   if(!m){ alert('Please enter time in minutes.'); return; }
   const r=REVIEWS.find(rv=>rv.feishuId===id); if(!r) return;
+  const totalWrong=r.wrongQ||0;
+  const countEl=document.getElementById(prefix+'-rcount-'+id);
+  // 这条review本身有错题数量的话，必须填写"今天复习了几题"；没有错题数量的review不需要这个数字
+  // (countEl本身只在totalWrong>0时才会渲染出来，所以totalWrong>0但countEl不存在/没填值，就是用户没填)
+  if(totalWrong>0){
+    const countVal = countEl ? parseInt(countEl.value) : NaN;
+    if(!countVal || countVal<=0){
+      alert('Please enter how many questions you reviewed today (this review has '+totalWrong+' question(s) to review).');
+      return;
+    }
+  }
   const now=new Date().toLocaleTimeString('en-AU',{hour:'2-digit',minute:'2-digit'});
   r.totalSecs=(r.totalSecs||0)+m*60;
   if(!r.sessions) r.sessions=[];
   r.sessions.push({a:'Session '+((r.sessions.length)+1),t:'Today '+now+' · '+m+'m'});
   const notesEl=document.getElementById(prefix+'-notes-'+id); if(notesEl) r.notes=notesEl.value||'';
-  const countEl=document.getElementById(prefix+'-rcount-'+id); if(countEl) r.reviewedCount=parseInt(countEl.value)||r.reviewedCount||0;
+  if(totalWrong>0 && countEl) r.reviewedCount=parseInt(countEl.value)||r.reviewedCount||0;
   const qinput=document.getElementById('rv-qm-'+id); if(qinput) qinput.value='';
+  // 把这次累加的时长/备注/复习进度真正同步到飞书，之前这里完全没有写入飞书,只停留在本地内存,刷新页面就丢失
+  feishuUpdateReviewQuickDone(r).then(res=>{
+    if(isFeishuUpdateSuccess(res)) showSyncToast('✓ Review progress saved to Feishu');
+    else { console.error('quickReviewDone failed, Feishu response:', JSON.stringify(res)); showSyncToast('⚠ Failed to save — please retry', true); }
+  });
   renderContent();
+}
+
+// ── 同步quickReviewDone记录的时长/备注/复习进度到飞书(累加用时,不是完全标记Done,所以不动Review Status) ──
+async function feishuUpdateReviewQuickDone(r){
+  if(!r.feishuId) return null;
+  const fields = { 'Review Time': r.totalSecs || 0, 'Review Notes': r.notes || '', 'Reviewed Count': r.reviewedCount || 0 };
+  const res = await apiCall(`/reviews/${r.feishuId}`, 'PATCH', fields);
+  console.log('feishuUpdateReviewQuickDone:', JSON.stringify(res));
+  return res;
 }
 
 function rvStart(id){
@@ -3566,7 +3595,7 @@ function feishuRecordToReview(rec){
     points: Number(f['Review Reward Points']) || 0,
     deleted: !!f['Deleted'],
     sessions: [],
-    reviewedCount: 0,
+    reviewedCount: Number(f['Reviewed Count']) || 0,
   };
 }
 
@@ -3680,20 +3709,18 @@ async function loadAllDataFromFeishu(){
       });
     }
 
-    // 用飞书的真实数据替换内存里的演示数据
-    if(loadedTasks.length > 0 || loadedRecurring.length > 0){
-      TASKS = loadedTasks;
-      RECURRING = loadedRecurring;
-      REVIEWS = loadedReviews;
-      // 数据加载完后,立即检查今天该生成的Recurring任务/课程,如果还没生成就真正写入飞书
-      // (这是方案A: 前端自己负责生成,不依赖Worker的Cron。去重靠Recurring Rule ID精确匹配,不会重复)
-      generateRecurring(true);
-      // 检查是否有Class已经过了下课时间但还没处理(没done/skip/reschedule)，自动标记完成
-      // 放在generateRecurring之后：刚生成的今天的课，如果碰巧填的endTime已经过了(比如很晚才打开页面)，也能被一起检查到
-      autoCompleteOverdueClasses();
-      renderContent();
-      console.log('Loaded from Feishu:', loadedTasks.length, 'tasks/classes,', loadedRecurring.length, 'recurring rules,', loadedReviews.length, 'reviews');
-    }
+    // 用飞书的真实数据填充进来(不再有演示数据需要保护，无条件替换，哪怕飞书目前是空的也如实反映)
+    TASKS = loadedTasks;
+    RECURRING = loadedRecurring;
+    REVIEWS = loadedReviews;
+    // 数据加载完后,立即检查今天该生成的Recurring任务/课程,如果还没生成就真正写入飞书
+    // (这是方案A: 前端自己负责生成,不依赖Worker的Cron。去重靠Recurring Rule ID精确匹配,不会重复)
+    generateRecurring(true);
+    // 检查是否有Class已经过了下课时间但还没处理(没done/skip/reschedule)，自动标记完成
+    // 放在generateRecurring之后：刚生成的今天的课，如果碰巧填的endTime已经过了(比如很晚才打开页面)，也能被一起检查到
+    autoCompleteOverdueClasses();
+    renderContent();
+    console.log('Loaded from Feishu:', loadedTasks.length, 'tasks/classes,', loadedRecurring.length, 'recurring rules,', loadedReviews.length, 'reviews');
   } catch(e){
     console.error('loadAllDataFromFeishu error:', e);
   }
