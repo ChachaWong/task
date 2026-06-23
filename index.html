@@ -886,6 +886,18 @@ function initReviewTSFromStatus(r){
   RVS[r.feishuId] = {state, elapsed:r.totalSecs||0, sessionStart:null, interval:null, sessions:r.sessions||[]};
 }
 
+// Task跟Review同样的问题：本地计时器TS对象只存在于内存里，刷新页面后TS是空的，
+// taskHTML渲染按钮时用的tst.state永远是初始值'idle'，导致不管飞书里Status存的是什么(哪怕是In Progress)，
+// 刷新后一律显示"▶ Start"——这正是"明明在平板上正在计时，电脑刷新却显示Start"的根因。
+// 跟Review一样，'In Progress'映射成'paused'(不直接当running)，因为不知道精确的开始时间，没法续算elapsed。
+const TASK_STATUS_TO_STATE = { 'Not Started':'idle', 'In Progress':'paused', 'Paused':'paused', 'Stopped':'stopped', 'Done':'idle' };
+function initTaskTSFromStatus(t){
+  if(TS[t.id]) return; // 已存在本地状态(比如本session正在计时)，不覆盖
+  if(t.status==='done') return; // 已完成的任务不需要初始化计时器状态(taskHTML的isDone分支根本不读tst.state)
+  const state = TASK_STATUS_TO_STATE[t._rawStatus] || 'idle';
+  TS[t.id] = {state, elapsed:t.totalSecs||0, sessionStart:null, interval:null, sessions:t.sessions||[], overtime:0};
+}
+
 // ── VIEW STATE ──
 let currentView = 'all';
 let doneTypeFilter = 'all';
@@ -3686,6 +3698,7 @@ function feishuRecordToTask(rec){
     subjects: subjectsArr,           // 真实多选值，用于多pill展示和按学科重复统计
     date: dateVal,
     status: status,
+    _rawStatus: f[F_TASK.status] || 'Not Started', // 飞书原始Status字符串(细分值)，给initTaskTSFromStatus初始化计时器按钮状态用，不要在别处依赖这个字段做业务判断(那应该用上面的status)
     estSecs: f[F_TASK.estimate] ? f[F_TASK.estimate]*60 : null,
     basePoints: Number(f[F_TASK.points]) || 0,
     totalSecs: Number(f[F_TASK.focusTime]) || 0,
@@ -3823,7 +3836,11 @@ async function loadAllDataFromFeishu(){
 
     const loadedTasks = [];
     if(taskRes?.data?.items){
-      taskRes.data.items.forEach(rec => loadedTasks.push(feishuRecordToTask(rec)));
+      taskRes.data.items.forEach(rec => {
+        const t = feishuRecordToTask(rec);
+        loadedTasks.push(t);
+        initTaskTSFromStatus(t); // 用飞书的真实Status初始化按钮状态(idle/paused/stopped)，避免一律误显示成"Start"——跟Review同样的修复
+      });
     }
     if(classRes?.data?.items){
       classRes.data.items.forEach(rec => loadedTasks.push(feishuRecordToClass(rec)));
