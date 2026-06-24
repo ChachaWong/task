@@ -2094,7 +2094,12 @@ function stLbl(s){ return {idle:'Ready to start',running:'Recording time…',pau
 function setTaskTimerMode(id,mode,btn){
   taskTimerMode[id]=mode;
   const t=ts(id);
-  if(t.state!=='idle'){ clearInterval(t.interval); TS[id]={state:'idle',elapsed:0,sessionStart:null,interval:null,sessions:[],overtime:0}; }
+  // 切换计时模式(Stopwatch/Countdown/Pomodoro)只是切换UI展示方式，不应该清空已经计的时长——
+  // 之前的写法会把整个TS[id]重置成全新的{elapsed:0}对象，意味着哪怕只是手滑碰到模式切换按钮，
+  // 已经累积的计时时长就会瞬间消失，而且这个操作完全不会被记录到飞书的任何日志里，事后无法追溯，
+  // 这是"时长莫名变少"这类问题的一个隐藏根因。现在如果正在running，复用tPause(同步飞书状态+记录pausedAt+写日志)，
+  // 已经是idle/paused/stopped则什么都不用做(它们本来就没有interval在跑，elapsed也已经是定值)。
+  if(t.state==='running') tPause(id);
   renderContent();
 }
 function setCountdownTarget(id){
