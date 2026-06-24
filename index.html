@@ -669,13 +669,23 @@ function predictedItemHTML(p){
 // ════════════════════════════════════════════
 // ── 打卡 (Streak) ──
 // ════════════════════════════════════════════
-// 判断某一天是否"打卡成功"：当天真实存在的所有task/class(不算被skip/reschedule/删除的)都必须是done。
-// 不要求Review也完成 —— Review本身是"有空再做"的性质，不是每天的硬性任务，纳入判断会让标准过严。
+// 判断某一天是否"打卡成功"：当天真实存在的所有task/class(不算被skip/reschedule/删除的)都必须
+// 在当天结束前就完成(不是事后随便哪天补做都能算)。不要求Review也完成 —— Review本身是"有空再做"
+// 的性质，不是每天的硬性任务，纳入判断会让标准过严。
 // 如果当天没有任何task/class安排，返回null(表示"无需打卡"，既不是成功也不是失败，不会打断连续记录)。
+//
+// 关键点：一条任务"对某天X算完成"，必须同时满足两件事——①它原本就是X这天的安排(t.date===X)，
+// ②它确实在X当天结束前就完成了(completedAt存在且落在X当天或更早)。如果是过了X之后才补做完成的
+// (比如昨天没做完，今天才补上)，那么对"昨天"这一天来说仍然算没完成——不能让今天的补救行为倒填
+// 昨天的打卡记录，否则"连续打卡"会失去激励"按时完成"的意义，变成可以欠着慢慢补的空子。
 function isDayCompleted(dateStr){
   const items = TASKS.filter(t=>fmtISO(t.date)===dateStr && !isHidden(t));
   if(!items.length) return null; // 这天没有任何安排，不计入打卡统计(不算成功也不算失败)
-  return items.every(t=>t.status==='done');
+  return items.every(t=>{
+    if(t.status!=='done') return false;
+    if(!t.completedAt) return false; // 状态是done但没有完成时间记录(数据异常)，保守地不算完成
+    return fmtISO(new Date(t.completedAt)) <= dateStr; // 必须在当天或更早就完成，事后补做的不算
+  });
 }
 
 // 从今天开始往前数连续打卡天数。
