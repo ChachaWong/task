@@ -608,10 +608,14 @@ function generateRecurring(writeToFeishu){
     }
   });
 }
-// 注意: 这里不在页面加载时立即调用generateRecurring —— 此时TASKS还是空的/初始演示数据，
-// 飞书里的真实历史记录还没加载进来，去重判断(第597-598行)会因为找不到任何已存在记录而误判，
-// 导致每次刷新页面都会凭空多生成一条本地"幽灵记录"(且不会写入飞书，因为这里传的是false)。
-// 真正的调用时机在loadAllDataFromFeishu()加载完真实数据之后(那里传true，且去重判断这时才真正可靠)。
+// 注意: generateRecurring现在只在"新建一条Recurring规则"那一刻被调用(addTask/addClass里)，
+// 用来检查这条刚创建的新规则今天是否就该生效，让新建规则能立刻看到效果，不用等到下一次Cron触发。
+// 页面加载/刷新时不再批量调用它去检查"所有规则今天是否都生成过了"——这件事现在完全交给
+// Cloudflare Worker的Cron Trigger负责(已配置为每12小时跑一次scheduled()，调用runDailyRecurringCheck)。
+// 之所以把"批量检查"这件事从前端移除：之前每次刷新页面都重新批量判断，如果短时间内多次刷新
+// (或多个设备分别刷新)，存在竞态窗口——第一次生成的写入请求还没真正在飞书落库完成，第二次刷新
+// 查询时可能还查不到它，于是误判"今天还没生成"又生成一条，导致同一天出现重复记录。Cron Trigger
+// 是服务端唯一、按固定时间表触发的入口，不会被前端刷新次数/设备数量影响，从架构上消除了这种竞态。
 
 // ════════════════════════════════════════════
 // ── 日历功能：周条 + 月视图共用的数据函数 ──
@@ -3890,11 +3894,15 @@ async function loadAllDataFromFeishu(){
     TASKS = loadedTasks;
     RECURRING = loadedRecurring;
     REVIEWS = loadedReviews;
-    // 数据加载完后,立即检查今天该生成的Recurring任务/课程,如果还没生成就真正写入飞书
-    // (这是方案A: 前端自己负责生成,不依赖Worker的Cron。去重靠Recurring Rule ID精确匹配,不会重复)
-    generateRecurring(true);
+    // 注意: 这里不再调用generateRecurring(true)批量检查所有Recurring规则——
+    // 之前的做法是"每次刷新页面都重新判断今天该不该生成"，但这样存在竞态窗口：如果短时间内
+    // 多次刷新(或多个设备分别刷新)，第一次写入飞书还没真正落库完成，第二次刷新查询飞书时可能
+    // 还查不到刚写入的那条，于是误判"今天还没生成"又生成了一条，导致同一天出现两条重复记录。
+    // 现在改成Cloudflare Worker的Cron Trigger(已配置为每12小时跑一次)负责每天的常规生成，
+    // 它是服务端唯一、按固定时间表触发的入口，不会因为前端刷新次数/设备数量而被多次触发，
+    // 从架构上直接消除了这种竞态。前端刷新页面现在只是单纯重新拉取并展示数据。
+    // (新建Recurring规则时如果今天就该生效，addTask/addClass里仍会立刻检查并生成这一条，不受影响)
     // 检查是否有Class已经过了下课时间但还没处理(没done/skip/reschedule)，自动标记完成
-    // 放在generateRecurring之后：刚生成的今天的课，如果碰巧填的endTime已经过了(比如很晚才打开页面)，也能被一起检查到
     autoCompleteOverdueClasses();
     renderContent();
     console.log('Loaded from Feishu:', loadedTasks.length, 'tasks/classes,', loadedRecurring.length, 'recurring rules,', loadedReviews.length, 'reviews');
