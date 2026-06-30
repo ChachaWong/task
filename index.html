@@ -1369,19 +1369,23 @@ function taskHTML(t, showNoReviewBtn){
     // 剩下的情况(marking.saved为true但没有正确率数据，即点过Quick Mark)：什么都不显示，跟Class勾选完成一样安静地标记完成
     if(t.basePoints) right+=`<span class="pts-tag">+${t.basePoints}pts</span>`;
   } else {
-    const st=tst.state;
-    // 折叠卡片外面直接显示可操作的迷你按钮+实时跳动的计时数字+简短的状态文字，不用点开详情面板才能Start/Pause/Continue/Stop。
-    // 计时数字的id(mini-clk)只在卡片没展开时才渲染——展开时这部分计时显示职责交给详情面板里的clk-${id}，
-    // 避免两个id同时存在于DOM里(tickUI会两边都尝试更新，但只有一个真正可见，是不必要的重复)。
-    const miniStLbl = {running:'● Recording', paused:'⏸ Paused', stopped:'⏹ Stopped'}[st];
-    const miniStColor = {running:'var(--accent)', paused:'var(--amber)', stopped:'var(--red)'}[st];
-    if((st==='running'||st==='paused'||st==='stopped') && !exp){
-      right += `<span id="mini-stlbl-${t.id}" style="font-size:11px;font-weight:600;color:${miniStColor}">${miniStLbl}</span>`;
+    // stopped是历史遗留状态(以后不会再产生新的，因为UI上已经没有Stop按钮了)，统一当作paused处理——
+    // 飞书里如果还存在历史的Stopped记录，刷新页面读回来后这里会被当成paused对待，可以直接点Continue接着用，
+    // 不会卡在一个UI上已经不存在对应入口的状态分支里。
+    const st = tst.state==='stopped' ? 'paused' : tst.state;
+    if(st==='idle'){
+      // idle状态用大号、蓝色底的Start按钮(跟以前一样的视觉规格)，不是迷你版——这是这次明确要恢复的地方
+      right += `<button class="action-btn primary" onclick="tStart('${t.id}',event)">▶ Start</button>`;
+    } else {
+      // running/paused状态：折叠卡片外面直接显示可操作的迷你按钮+实时跳动的计时数字+简短的状态文字，
+      // 不用点开详情面板才能Pause/Continue。计时数字的id(mini-clk)只在卡片没展开时才渲染——展开时这部分
+      // 计时显示职责交给详情面板里的clk-${id}，避免两个id同时存在于DOM里造成不必要的重复更新。
+      const miniStLbl = {running:'● Recording', paused:'⏸ Paused'}[st];
+      const miniStColor = {running:'var(--accent)', paused:'var(--amber)'}[st];
+      if(!exp) right += `<span id="mini-stlbl-${t.id}" style="font-size:11px;font-weight:600;color:${miniStColor}">${miniStLbl}</span>`;
+      if(!exp) right += `<span class="mini-timer-display" id="mini-clk-${t.id}">${fmtSecs(tst.elapsed)}</span>`;
+      right += `<span id="mini-btnrow-${t.id}">${miniBtnRow(t.id,st)}</span>`;
     }
-    if(st==='running'||st==='paused'){
-      if(!exp) right+=`<span class="mini-timer-display" id="mini-clk-${t.id}">${fmtSecs(tst.elapsed)}</span>`;
-    }
-    right+=`<span id="mini-btnrow-${t.id}">${miniBtnRow(t.id,st)}</span>`;
     if(t.basePoints)   right+=`<span class="pts-tag">+${t.basePoints}pts</span>`;
   }
   right+=`<span class="chevron ${exp?'open':''}">▾</span>`;
@@ -1464,6 +1468,9 @@ function classCardHTML(t){
 
 function expandedHTML(t){
   const isDone=t.status==='done', tst=ts(t.id);
+  // stopped是历史遗留状态(以后不会再产生新的)，渲染时统一当作paused处理——这里只是渲染期间用的局部判断值，
+  // 不直接修改tst.state这个真实计时器对象(避免一个渲染函数产生意外的数据副作用)。
+  const displayState = tst.state==='stopped' ? 'paused' : tst.state;
 
   // ── 左栏：Task Details/Points 这一块，未完成和已完成都要 ──
   const detailsBlock = `<div style="margin-bottom:8px;display:flex;gap:8px;align-items:flex-end">
@@ -1549,20 +1556,20 @@ function expandedHTML(t){
       <div style="display:flex;flex-direction:column;align-items:center;gap:10px">
         <div class="clock-wrap">
           <svg viewBox="0 0 84 84"><circle class="c-track" cx="42" cy="42" r="34"/>
-            <circle class="c-prog ${tst.state}" id="ring-${t.id}" cx="42" cy="42" r="34" style="stroke-dashoffset:${214-Math.min(tst.elapsed/3600,1)*214}"/></svg>
+            <circle class="c-prog ${displayState}" id="ring-${t.id}" cx="42" cy="42" r="34" style="stroke-dashoffset:${214-Math.min(tst.elapsed/3600,1)*214}"/></svg>
           <div class="clock-center">
             <div class="clock-time" id="clk-${t.id}">${tmode==='countdown'||tmode==='pomodoro'?fmtCountdown(t.id):fmtSecs(tst.elapsed)}</div>
-            <div class="clock-lbl" id="clklbl-${t.id}">${tst.state==='running'?(tmode==='pomodoro'?'focus':'timing'):tst.state}</div>
+            <div class="clock-lbl" id="clklbl-${t.id}">${displayState==='running'?(tmode==='pomodoro'?'focus':'timing'):displayState}</div>
           </div>
         </div>
         <div class="timer-controls" style="align-items:center">
           <div class="timer-status">
-            <div class="sdot ${tst.state}" id="sdot-${t.id}"></div>
-            <span id="stxt-${t.id}">${stLbl(tst.state)}</span>
+            <div class="sdot ${displayState}" id="sdot-${t.id}"></div>
+            <span id="stxt-${t.id}">${stLbl(displayState)}</span>
             ${tmode==='countdown'&&tst.overtime?`<span style="font-size:11px;color:var(--red);margin-left:4px">+${durFmt(tst.overtime)} overtime</span>`:''}
           </div>
           ${t.estSecs?`<div class="est-compare">Estimated: <span>${durFmt(t.estSecs)}</span></div>`:''}
-          <div class="btn-row" id="btnrow-${t.id}">${btnRow(t.id,tst.state)}</div>
+          <div class="btn-row" id="btnrow-${t.id}">${btnRow(t.id,displayState)}</div>
         </div>
         <div style="width:100%;border-top:1px solid var(--border);padding-top:10px">
           <div class="quick-lbl" style="text-align:center">Or log manually</div>
@@ -1607,8 +1614,20 @@ function reviewCardHTML(r){
         ${totalWrong>0?`<div style="display:flex;align-items:center;gap:8px"><div style="flex:1;height:5px;background:var(--border);border-radius:3px;overflow:hidden;max-width:160px"><div style="width:${progPct}%;height:100%;background:${progColor};border-radius:3px"></div></div><span style="font-size:11px;font-family:'DM Mono',monospace;color:var(--text-3)">${reviewed}/${totalWrong} reviewed</span></div>`:''}
       </div>
       <div class="task-right">
-        ${(r.totalSecs||(getReviewTS(r.feishuId).elapsed>0?getReviewTS(r.feishuId).elapsed:0))?`<span class="task-duration">${durFmt(r.totalSecs||getReviewTS(r.feishuId).elapsed)}</span>`:''}
-        ${r.done?'<span class="review-tag rt-done">✓ Done</span>':(()=>{ const rst=getReviewTS(r.feishuId).state; if(rst==='running') return '<span class="review-tag" style="background:var(--accent-bg);color:var(--accent)">● Recording</span>'; if(rst==='paused') return '<span class="review-tag rt-needed">⏸ Paused</span>'; if(rst==='stopped') return '<span class="review-tag" style="background:var(--red-bg);color:var(--red)">⏹ Stopped</span>'; return `<button class="action-btn primary" onclick="expandReviewAndStart('${r.feishuId}',event)">▶ Start</button>`; })()}
+        ${r.done?`${r.totalSecs?`<span class="task-duration">${durFmt(r.totalSecs)}</span>`:''}<span class="review-tag rt-done">✓ Done</span>`:(()=>{
+          const tst=getReviewTS(r.feishuId);
+          const st = tst.state==='stopped' ? 'paused' : tst.state;
+          if(st==='idle') return `<button class="action-btn primary" onclick="rvStart('${r.feishuId}',event)">▶ Start</button>`;
+          const labels={running:'● Recording', paused:'⏸ Paused'};
+          const colors={running:'var(--accent)', paused:'var(--amber)'};
+          let html='';
+          if(!exp){
+            html+=`<span id="rv-mini-stlbl-${r.feishuId}" style="font-size:11px;font-weight:600;color:${colors[st]}">${labels[st]}</span>`;
+            html+=`<span class="mini-timer-display" id="rv-mini-clk-${r.feishuId}">${fmtSecs(tst.elapsed)}</span>`;
+          }
+          html+=`<span id="rv-mini-btnrow-${r.feishuId}">${miniBtnRow(r.feishuId,st,'review')}</span>`;
+          return html;
+        })()}
         ${accBadgeHTML(pct)}
         ${r.done&&r.points?`<span class="pts-tag">+${r.points}pts</span>`:''}
         <span class="chevron ${exp?'open':''}">▾</span>
@@ -1625,6 +1644,8 @@ function reviewSubHTML(r, prefix){
   const progColor=progPct===100?'var(--green)':progPct>=50?'var(--amber)':'var(--red)';
   const id=r.feishuId;
   const tst=getReviewTS(id);
+  // stopped是历史遗留状态(以后不会再产生新的)，渲染时统一当作paused处理，跟Task的expandedHTML同样的处理方式
+  const displayState = tst.state==='stopped' ? 'paused' : tst.state;
   const isDone=r.done;
   const pct=accPct(r.totalQ,r.wrongQ);
   const accColor=pct===null?'var(--text-3)':pct>=90?'var(--green)':pct>=70?'var(--amber)':'var(--red)';
@@ -1670,15 +1691,15 @@ function reviewSubHTML(r, prefix){
     <div class="timer-panel" style="padding:14px;flex-wrap:wrap">
       <div class="clock-wrap">
         <svg viewBox="0 0 84 84"><circle class="c-track" cx="42" cy="42" r="34"/>
-          <circle class="c-prog ${tst.state}" id="rv-ring-${id}" cx="42" cy="42" r="34" style="stroke-dashoffset:${214-Math.min(tst.elapsed/3600,1)*214}"/></svg>
+          <circle class="c-prog ${displayState}" id="rv-ring-${id}" cx="42" cy="42" r="34" style="stroke-dashoffset:${214-Math.min(tst.elapsed/3600,1)*214}"/></svg>
         <div class="clock-center">
           <div class="clock-time" id="rv-clk-${id}">${rmode==='countdown'?fmtReviewCountdown(id):fmtSecs(tst.elapsed)}</div>
-          <div class="clock-lbl" id="rv-clklbl-${id}">${tst.state==='running'?'focus':tst.state}</div>
+          <div class="clock-lbl" id="rv-clklbl-${id}">${displayState==='running'?'focus':displayState}</div>
         </div>
       </div>
       <div class="timer-controls">
-        <div class="timer-status"><div class="sdot ${tst.state}" id="rv-sdot-${id}"></div><span id="rv-stxt-${id}">${stLbl(tst.state)}</span></div>
-        <div class="btn-row" id="rv-btnrow-${id}">${reviewBtnRow(id,tst.state)}</div>
+        <div class="timer-status"><div class="sdot ${displayState}" id="rv-sdot-${id}"></div><span id="rv-stxt-${id}">${stLbl(displayState)}</span></div>
+        <div class="btn-row" id="rv-btnrow-${id}">${reviewBtnRow(id,displayState)}</div>
       </div>
       <div class="qdivider"></div>
       <div class="quick-area">
@@ -1808,8 +1829,20 @@ function reviewPageCardHTML(r){
         ${totalWrong>0?`<div style="display:flex;align-items:center;gap:8px"><div style="flex:1;height:5px;background:var(--border);border-radius:3px;overflow:hidden;max-width:160px"><div style="width:${progPct}%;height:100%;background:${progColor};border-radius:3px"></div></div><span style="font-size:11px;font-family:'DM Mono',monospace;color:var(--text-3)">${reviewed}/${totalWrong} reviewed</span></div>`:''}
       </div>
       <div class="task-right">
-        ${(r.totalSecs||(getReviewTS(r.feishuId).elapsed>0?getReviewTS(r.feishuId).elapsed:0))?`<span class="task-duration">${durFmt(r.totalSecs||getReviewTS(r.feishuId).elapsed)}</span>`:''}
-        ${r.done?'<span class="review-tag rt-done">✓ Done</span>':(()=>{ const rst=getReviewTS(r.feishuId).state; if(rst==='running') return '<span class="review-tag" style="background:var(--accent-bg);color:var(--accent)">● Recording</span>'; if(rst==='paused') return '<span class="review-tag rt-needed">⏸ Paused</span>'; if(rst==='stopped') return '<span class="review-tag" style="background:var(--red-bg);color:var(--red)">⏹ Stopped</span>'; return `<button class="action-btn primary" onclick="expandReviewHistAndStart('${r.feishuId}',event)">▶ Start</button>`; })()}
+        ${r.done?`${r.totalSecs?`<span class="task-duration">${durFmt(r.totalSecs)}</span>`:''}<span class="review-tag rt-done">✓ Done</span>`:(()=>{
+          const tst=getReviewTS(r.feishuId);
+          const st = tst.state==='stopped' ? 'paused' : tst.state;
+          if(st==='idle') return `<button class="action-btn primary" onclick="rvStart('${r.feishuId}',event)">▶ Start</button>`;
+          const labels={running:'● Recording', paused:'⏸ Paused'};
+          const colors={running:'var(--accent)', paused:'var(--amber)'};
+          let html='';
+          if(!exp){
+            html+=`<span id="rv-mini-stlbl-${r.feishuId}" style="font-size:11px;font-weight:600;color:${colors[st]}">${labels[st]}</span>`;
+            html+=`<span class="mini-timer-display" id="rv-mini-clk-${r.feishuId}">${fmtSecs(tst.elapsed)}</span>`;
+          }
+          html+=`<span id="rv-mini-btnrow-${r.feishuId}">${miniBtnRow(r.feishuId,st,'review')}</span>`;
+          return html;
+        })()}
         ${accBadgeHTML(pct)}
         ${r.done&&r.points?`<span class="pts-tag">+${r.points}pts</span>`:''}
         <span class="chevron ${exp?'open':''}">▾</span>
@@ -1823,12 +1856,6 @@ function expandReviewHist(id,e){
   if(e&&e.target.closest('.task-check')) return;
   expandedReviewId=expandedReviewId===id?null:id;
   openReviewHistory();
-}
-function expandReviewHistAndStart(id,e){
-  e.stopPropagation();
-  expandedReviewId=id;
-  renderReviewHistoryPage();
-  const tst=getReviewTS(id); if(tst.state==='idle') rvStart(id);
 }
 
 function showFullPage(title, body){
@@ -1925,12 +1952,6 @@ function expandReview(id,e){
   expandedReviewId=expandedReviewId===id?null:id;
   renderContent();
 }
-function expandReviewAndStart(id,e){
-  e.stopPropagation();
-  expandedReviewId=id;
-  renderContent();
-  const tst=getReviewTS(id); if(tst.state==='idle') rvStart(id);
-}
 
 let pendingReviewDoneId = null;
 
@@ -1938,8 +1959,11 @@ function tickReview(id,e){
   e.stopPropagation();
   const r=REVIEWS.find(rv=>rv.feishuId===id); if(!r) return;
   if(r.done){ playTickSound(false); undoReview(id); return; }
-  pendingReviewDoneId = id;
   const tst=getReviewTS(id);
+  // 只拦住running——计时还在走，时间没定下来，不能标记完成。跟tickTask保持一致的规则：
+  // paused状态下elapsed已经是定格的、可信的累积时长，可以直接用来完成，不需要先经过"Stop"这个步骤。
+  if(tst.state==='running'){ alert('Please pause the timer first.'); return; }
+  pendingReviewDoneId = id;
   const wrongVal=(r.wrongQ&&r.wrongQ>0)?r.wrongQ:null;
   const rvTotalWrong=document.getElementById('rv-done-total-wrong');
   const rvCorrected=document.getElementById('rv-done-corrected');
@@ -2063,9 +2087,8 @@ async function feishuUpdateReviewDetails(r){
 
 function reviewBtnRow(id,state){
   if(state==='idle')    return `<button class="tbtn tbtn-start" style="font-size:11px;padding:5px 10px" onclick="rvStart('${id}')">▶ Start</button>`;
-  if(state==='running') return `<button class="tbtn tbtn-pause" style="font-size:11px;padding:5px 10px" onclick="rvPause('${id}')">⏸ Pause</button><button class="tbtn tbtn-finish" style="font-size:11px;padding:5px 10px" onclick="rvFinish('${id}')">⏹ Stop</button>`;
+  if(state==='running') return `<button class="tbtn tbtn-pause" style="font-size:11px;padding:5px 10px" onclick="rvPause('${id}')">⏸ Pause</button>`;
   if(state==='paused')  return `<button class="tbtn tbtn-continue" style="font-size:11px;padding:5px 10px" onclick="rvContinue('${id}')">▶ Continue</button>`;
-  if(state==='stopped') return `<button class="tbtn tbtn-continue" style="font-size:11px;padding:5px 10px" onclick="rvResumeFromStop('${id}')">▶ Continue</button>`;
   return '';
 }
 
@@ -2121,7 +2144,8 @@ async function feishuUpdateReviewQuickDone(r){
   return res;
 }
 
-function rvStart(id){
+function rvStart(id,e){
+  if(e) e.stopPropagation();
   const t=getReviewTS(id); if(t.state==='running') return;
   const rmode=reviewTimerMode[id]||'stopwatch';
   if(rmode==='countdown'&&!reviewCountdownTarget[id]) setReviewCountdownTarget(id);
@@ -2138,7 +2162,8 @@ function rvStart(id){
   const r=REVIEWS.find(rv=>rv.feishuId===id);
   if(r){ feishuUpdateReview(r,'In Progress'); feishuLogActionForReview(r,'Start'); }
 }
-function rvPause(id){
+function rvPause(id,e){
+  if(e) e.stopPropagation();
   const t=getReviewTS(id); if(t.state!=='running') return;
   clearInterval(t.interval); t.state='paused';
   t.sessions.push({a:'Pause',t:'Today '+new Date().toLocaleTimeString('en-AU',{hour:'2-digit',minute:'2-digit'})});
@@ -2146,7 +2171,8 @@ function rvPause(id){
   const r=REVIEWS.find(rv=>rv.feishuId===id);
   if(r){ feishuLogActionForReview(r,'Pause'); feishuUpdateReview(r,'Paused'); }
 }
-function rvContinue(id){
+function rvContinue(id,e){
+  if(e) e.stopPropagation();
   const t=getReviewTS(id);
   t.state='running'; t.sessionStart=Date.now()-t.elapsed*1000;
   t.sessions.push({a:'Continue',t:'Today '+new Date().toLocaleTimeString('en-AU',{hour:'2-digit',minute:'2-digit'})});
@@ -2188,29 +2214,44 @@ function fmtReviewCountdown(id){
 }
 function rvTickUI(id,t){
   const clk=document.getElementById('rv-clk-'+id), ring=document.getElementById('rv-ring-'+id);
+  const miniClk=document.getElementById('rv-mini-clk-'+id); // 折叠卡片上的迷你计时数字
   const rmode=reviewTimerMode[id]||'stopwatch';
   if(clk) clk.textContent = rmode==='countdown' ? fmtReviewCountdown(id) : fmtSecs(t.elapsed);
+  if(miniClk) miniClk.textContent = fmtSecs(t.elapsed); // 折叠卡片统一显示正计时(不需要倒计时细节，保持简洁)
   if(ring){ ring.style.strokeDashoffset=214-Math.min(t.elapsed/3600,1)*214; ring.className='c-prog '+t.state; }
 }
-function rvUpdateCtrl(id,t){ const br=document.getElementById('rv-btnrow-'+id); if(br) br.innerHTML=reviewBtnRow(id,t.state); }
+function rvUpdateCtrl(id,t){
+  const br=document.getElementById('rv-btnrow-'+id);
+  const miniBr=document.getElementById('rv-mini-btnrow-'+id);
+  const miniStLbl=document.getElementById('rv-mini-stlbl-'+id);
+  if(br) br.innerHTML=reviewBtnRow(id,t.state);
+  if(miniBr) miniBr.innerHTML=miniBtnRow(id,t.state,'review'); // 传'review'调用rvPause/rvContinue，不是Task的tPause/tContinue
+  if(miniStLbl){
+    const labels={running:'● Recording', paused:'⏸ Paused'};
+    const colors={running:'var(--accent)', paused:'var(--amber)'};
+    miniStLbl.textContent=labels[t.state]||'';
+    miniStLbl.style.color=colors[t.state]||'';
+  }
+}
 // ── TASK TIMER ──
 function btnRow(id,state){
   if(state==='idle')    return `<button class="tbtn tbtn-start" onclick="tStart('${id}')">▶ Start</button>`;
-  if(state==='running') return `<button class="tbtn tbtn-pause" onclick="tPause('${id}')">⏸ Pause</button><button class="tbtn tbtn-finish" onclick="tFinish('${id}')">⏹ Stop</button>`;
+  if(state==='running') return `<button class="tbtn tbtn-pause" onclick="tPause('${id}')">⏸ Pause</button>`;
   if(state==='paused')  return `<button class="tbtn tbtn-continue" onclick="tContinue('${id}')">▶ Continue</button>`;
-  if(state==='stopped') return `<button class="tbtn tbtn-continue" onclick="tStart('${id}')">▶ Continue</button>`;
   return '';
 }
-// 折叠卡片外面用的迷你按钮：跟btnRow同样的状态→函数映射，只是换成不带文字的小图标按钮(tbtn-mini尺寸)，
-// 这样不展开详情面板也能直接Start/Pause/Continue/Stop，不用每次都点开一大块详情才能操作计时器
-function miniBtnRow(id,state){
-  if(state==='idle')    return `<button class="tbtn-mini tbtn-start" onclick="tStart('${id}',event)" title="Start">▶</button>`;
-  if(state==='running') return `<button class="tbtn-mini tbtn-pause" onclick="tPause('${id}',event)" title="Pause">⏸</button><button class="tbtn-mini tbtn-finish" onclick="tFinish('${id}',event)" title="Stop">⏹</button>`;
-  if(state==='paused')  return `<button class="tbtn-mini tbtn-continue" onclick="tContinue('${id}',event)" title="Continue">▶</button><button class="tbtn-mini tbtn-finish" onclick="tFinish('${id}',event)" title="Stop">⏹</button>`;
-  if(state==='stopped') return `<button class="tbtn-mini tbtn-continue" onclick="tStart('${id}',event)" title="Continue">▶</button>`;
+// 折叠卡片外面用的迷你按钮：running只有Pause，paused只有Continue，不再有Stop按钮——
+// "暂停"本身就是可以安全标记完成的状态，不需要再额外一个语义重复的Stop动作。
+// idle状态改用大号的action-btn.primary样式Start按钮，在taskHTML/reviewCardHTML里单独处理，不走这个函数。
+// kind参数区分调用Task还是Review各自的Pause/Continue函数，避免Review的id被错误地传给Task的tPause/tContinue。
+function miniBtnRow(id,state,kind){
+  const pauseFn = kind==='review' ? 'rvPause' : 'tPause';
+  const continueFn = kind==='review' ? 'rvContinue' : 'tContinue';
+  if(state==='running') return `<button class="tbtn-mini tbtn-pause" onclick="${pauseFn}('${id}',event)" title="Pause">⏸</button>`;
+  if(state==='paused')  return `<button class="tbtn-mini tbtn-continue" onclick="${continueFn}('${id}',event)" title="Continue">▶</button>`;
   return '';
 }
-function stLbl(s){ return {idle:'Ready to start',running:'Recording time…',paused:'Paused',stopped:'Session finished'}[s]||s; }
+function stLbl(s){ return {idle:'Ready to start',running:'Recording time…',paused:'Paused'}[s]||s; }
 
 function setTaskTimerMode(id,mode,btn){
   taskTimerMode[id]=mode;
@@ -2351,8 +2392,8 @@ function updateCtrl(id,t){
   if(br) br.innerHTML=btnRow(id,t.state);
   if(miniBr) miniBr.innerHTML=miniBtnRow(id,t.state);
   if(miniStLbl){
-    const labels={running:'● Recording', paused:'⏸ Paused', stopped:'⏹ Stopped'};
-    const colors={running:'var(--accent)', paused:'var(--amber)', stopped:'var(--red)'};
+    const labels={running:'● Recording', paused:'⏸ Paused'};
+    const colors={running:'var(--accent)', paused:'var(--amber)'};
     miniStLbl.textContent=labels[t.state]||'';
     miniStLbl.style.color=colors[t.state]||'';
   }
@@ -2477,7 +2518,10 @@ function tickTask(id,e){
   const task=TASKS.find(t=>t.id===id); if(!task) return;
   if(task.status==='done'){ playTickSound(false); undoTask(id); return; }
   const tst=ts(id);
-  if(tst.state==='running'||tst.state==='paused'){ alert('Please finish the timer session first.'); return; }
+  // 只拦住running(计时还在走，时间没定下来，不能标记完成)。paused放行——openDoneModal/confirmDone本身
+  // 就是直接读取tst.elapsed结算最终时长，不需要先经过"Stop"这个步骤，paused状态下elapsed已经是
+  // 定格的、可信的累积时长，可以直接用来完成。这样"暂停了就可以直接tick"，不再需要额外的Stop动作。
+  if(tst.state==='running'){ alert('Please pause the timer first.'); return; }
   playTickSound(true);
   openDoneModal(id);
 }
