@@ -425,13 +425,16 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
     <div class="field" style="margin-bottom:10px">
       <input type="datetime-local" id="pastDateCompletedAt" style="width:100%;padding:8px 10px;border:1px solid var(--border2);border-radius:8px;font-size:13px;font-family:'DM Mono',monospace">
     </div>
-    <div style="font-size:13px;color:var(--text-2);margin-bottom:10px">Do you know how long it took?</div>
-    <div class="field" style="margin-bottom:14px">
-      <div style="display:flex;gap:8px;align-items:center">
-        <input type="number" id="pastDateMins" placeholder="minutes" style="width:100px;padding:8px 10px;border:1px solid var(--border2);border-radius:8px;font-size:13px;font-family:'DM Mono',monospace">
-        <span style="font-size:12px;color:var(--text-3)">minutes (leave blank if unknown)</span>
+    <div id="pastDateMinsBlock">
+      <div style="font-size:13px;color:var(--text-2);margin-bottom:10px">Do you know how long it took?</div>
+      <div class="field" style="margin-bottom:14px">
+        <div style="display:flex;gap:8px;align-items:center">
+          <input type="number" id="pastDateMins" placeholder="minutes" style="width:100px;padding:8px 10px;border:1px solid var(--border2);border-radius:8px;font-size:13px;font-family:'DM Mono',monospace">
+          <span style="font-size:12px;color:var(--text-3)">minutes (leave blank if unknown)</span>
+        </div>
       </div>
     </div>
+    <div id="pastDateAutoTimeNote" style="display:none;font-size:12px;color:var(--text-3);margin-bottom:14px;padding:8px 10px;background:var(--bg);border-radius:8px">⏱️ Duration will be calculated automatically from the class's start/end time.</div>
     <div class="modal-actions">
       <button class="mbtn-cancel" onclick="skipPastDateMinutes()">Skip (unknown time)</button>
       <button class="mbtn-save"   onclick="confirmPastDateWithTime()">Confirm</button>
@@ -1367,9 +1370,14 @@ function taskHTML(t, showNoReviewBtn){
     if(t.basePoints) right+=`<span class="pts-tag">+${t.basePoints}pts</span>`;
   } else {
     const st=tst.state;
-    // 折叠卡片外面直接显示可操作的迷你按钮+实时跳动的计时数字，不用点开详情面板才能Start/Pause/Continue/Stop。
+    // 折叠卡片外面直接显示可操作的迷你按钮+实时跳动的计时数字+简短的状态文字，不用点开详情面板才能Start/Pause/Continue/Stop。
     // 计时数字的id(mini-clk)只在卡片没展开时才渲染——展开时这部分计时显示职责交给详情面板里的clk-${id}，
     // 避免两个id同时存在于DOM里(tickUI会两边都尝试更新，但只有一个真正可见，是不必要的重复)。
+    const miniStLbl = {running:'● Recording', paused:'⏸ Paused', stopped:'⏹ Stopped'}[st];
+    const miniStColor = {running:'var(--accent)', paused:'var(--amber)', stopped:'var(--red)'}[st];
+    if((st==='running'||st==='paused'||st==='stopped') && !exp){
+      right += `<span id="mini-stlbl-${t.id}" style="font-size:11px;font-weight:600;color:${miniStColor}">${miniStLbl}</span>`;
+    }
     if(st==='running'||st==='paused'){
       if(!exp) right+=`<span class="mini-timer-display" id="mini-clk-${t.id}">${fmtSecs(tst.elapsed)}</span>`;
     }
@@ -2339,8 +2347,15 @@ function updateCtrl(id,t){
   const br=document.getElementById('btnrow-'+id), dot=document.getElementById('sdot-'+id);
   const stxt=document.getElementById('stxt-'+id), lbl=document.getElementById('clklbl-'+id);
   const miniBr=document.getElementById('mini-btnrow-'+id); // 折叠卡片上的迷你按钮区域
+  const miniStLbl=document.getElementById('mini-stlbl-'+id); // 折叠卡片上的状态文字
   if(br) br.innerHTML=btnRow(id,t.state);
   if(miniBr) miniBr.innerHTML=miniBtnRow(id,t.state);
+  if(miniStLbl){
+    const labels={running:'● Recording', paused:'⏸ Paused', stopped:'⏹ Stopped'};
+    const colors={running:'var(--accent)', paused:'var(--amber)', stopped:'var(--red)'};
+    miniStLbl.textContent=labels[t.state]||'';
+    miniStLbl.style.color=colors[t.state]||'';
+  }
   if(stxt) stxt.textContent=stLbl(t.state);
   if(lbl) lbl.textContent=t.state==='running'?'focus':t.state;
 }
@@ -2691,7 +2706,7 @@ function getSelectedDays(pickerId){
 
 // ── 自定义"过去日期确认"弹窗（替代丑陋的confirm()）──
 let _pastDateResolve = null;
-function askPastDateStatus(message, taskDateStr){
+function askPastDateStatus(message, taskDateStr, isClass){
   document.getElementById('pastDateMsg').textContent = message;
   document.getElementById('pastDateStep1').style.display = 'flex';
   document.getElementById('pastDateStep2').style.display = 'none';
@@ -2699,6 +2714,11 @@ function askPastDateStatus(message, taskDateStr){
   // 默认完成时间 = 任务原本的日期 + 中午12点 —— 用户不改就直接用这个默认值，确保飞书Completed At列的格式始终统一(都带时间，不是有的有时间有的只有日期)
   const defaultDate = taskDateStr || fmtISO(today);
   document.getElementById('pastDateCompletedAt').value = defaultDate + 'T12:00';
+  // Class已经有Start/End Time，时长能自动算出来，不需要再问"花了多久"——隐藏那个输入框，改显示一句自动提示
+  document.getElementById('pastDateMinsBlock').style.display = isClass ? 'none' : 'block';
+  document.getElementById('pastDateAutoTimeNote').style.display = isClass ? 'block' : 'none';
+  const skipBtn = document.querySelector('#pastDateStep2 .mbtn-cancel');
+  if(skipBtn) skipBtn.style.display = isClass ? 'none' : ''; // Class场景没有"未知时长"这个概念，不需要Skip按钮，直接用Confirm一个按钮就够了
   openModal('pastDateModal');
   return new Promise(resolve => { _pastDateResolve = resolve; });
 }
@@ -2826,12 +2846,18 @@ async function addClass(){
     const isPastDate = dateVal < fmtISO(today);
     let initialStatus = 'pending';
     let backfilledCompletedAt = null;
+    let backfilledSecs = 0;
     if(isPastDate){
-      const result = await askPastDateStatus('This class is dated in the past. Was it already attended?', dateVal);
+      const result = await askPastDateStatus('This class is dated in the past. Was it already attended?', dateVal, true);
       initialStatus = result.completed ? 'done' : 'pending';
-      if(result.completed) backfilledCompletedAt = result.completedAtMs;
+      if(result.completed){
+        backfilledCompletedAt = result.completedAtMs;
+        // Class已经有Start/End Time，时长直接自动算出来，不需要用户手动填——补全了之前这里newTask.totalSecs一直硬编码0、从来没真正记过时长的缺口
+        const dur = classDurationSecs(startTime, endTime);
+        if(dur!=null) backfilledSecs = dur;
+      }
     }
-    const newTask={id:'T'+String(taskIdCounter++).padStart(3,'0'),type:'class',name,subject:subjectLabel,subjects:types,startTime,endTime,location,date:new Date(dateVal+'T00:00:00'),status:initialStatus,completedAt:backfilledCompletedAt,recurId:null,basePoints,sessions:[],marking:null,review:null,totalSecs:0,estSecs:null,pricePerLesson,packageTotal,totalLessons,classNotes,feishuId:null};
+    const newTask={id:'T'+String(taskIdCounter++).padStart(3,'0'),type:'class',name,subject:subjectLabel,subjects:types,startTime,endTime,location,date:new Date(dateVal+'T00:00:00'),status:initialStatus,completedAt:backfilledCompletedAt,recurId:null,basePoints,sessions:[],marking:null,review:null,totalSecs:backfilledSecs,estSecs:null,pricePerLesson,packageTotal,totalLessons,classNotes,feishuId:null};
     TASKS.push(newTask);
     feishuCreateClass(newTask).then(res=>{
       if(isFeishuCreateSuccess(res)) showSyncToast('✓ Saved to Feishu');
