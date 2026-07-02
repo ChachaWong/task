@@ -152,7 +152,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
 .tbtn-done{background:var(--green-bg);color:var(--green);border:1px solid #86EFAC;}.tbtn-done:hover{background:#86EFAC;}
 /* 折叠卡片外面的迷你按钮：跟tbtn-start/pause/continue/finish这些颜色class组合使用(class="tbtn-mini tbtn-start")，
    只是更小的padding+不留文字间距的空隙，图标本身已经说明意思，不需要再占地方写文字 */
-.tbtn-mini{padding:5px 8px;border-radius:7px;font-size:13px;font-weight:600;border:none;cursor:pointer;transition:all 0.15s;display:inline-flex;align-items:center;justify-content:center;line-height:1;}
+.tbtn-mini{padding:8px 13px;border-radius:8px;font-size:16px;font-weight:600;border:none;cursor:pointer;transition:all 0.15s;display:inline-flex;align-items:center;justify-content:center;line-height:1;}
 .tbtn-mini:active{transform:scale(0.92);}
 .mini-timer-display{font-size:13px;font-weight:700;font-family:'DM Mono',monospace;color:var(--text-2);white-space:nowrap;}
 .qdivider{width:1px;height:52px;background:var(--border);flex-shrink:0;}
@@ -189,7 +189,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
 .tbtn-save-marking{padding:6px 11px;background:var(--text);color:white;border:none;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;align-self:flex-end;}
 .tbtn-save-marking:hover{background:#333;}
 .tbtn-edit{padding:5px 9px;background:var(--bg);color:var(--text-3);border:1px solid var(--border);border-radius:6px;font-size:10px;cursor:pointer;font-family:'DM Sans',sans-serif;align-self:flex-end;}
-.review-sub{border-top:1px solid var(--border);padding:14px 18px;background:#FFFBF0;}
+.review-sub{border-top:1px solid var(--border);background:#FFFBF0;}
 .review-sub-title{font-size:11px;font-weight:600;color:var(--amber);display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;}
 .review-done-badge{font-size:11px;font-weight:600;color:var(--green);background:var(--green-bg);padding:2px 8px;border-radius:20px;}
 .modal-overlay{display:none;position:fixed;inset:0;background:rgba(26,24,20,0.45);backdrop-filter:blur(3px);z-index:200;align-items:center;justify-content:center;padding:20px;}
@@ -1483,15 +1483,19 @@ function expandedHTML(t){
     </div>
   </div>`;
 
-  const notesRow = `<div style="margin-bottom:4px">
-    <div class="field-lbl">Notes</div>
-    <textarea id="task-notes-${t.id}" rows="2" style="width:100%;padding:5px 7px;border:1px solid var(--border2);border-radius:6px;font-size:11px;font-family:'DM Sans',sans-serif;resize:none">${t.notes||''}</textarea>
+  // notes textarea + save/delete buttons in one inline row (notes on left, buttons stacked on right)
+  const notesRow = `<div style="display:flex;gap:7px;align-items:flex-start;margin-bottom:6px">
+    <div style="flex:1;min-width:0">
+      <div class="field-lbl">Notes</div>
+      <textarea id="task-notes-${t.id}" rows="3" style="width:100%;padding:5px 7px;border:1px solid var(--border2);border-radius:6px;font-size:11px;font-family:'DM Sans',sans-serif;resize:none">${t.notes||''}</textarea>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:5px;padding-top:17px;flex-shrink:0">
+      <button onclick="saveTaskDetails('${t.id}')" style="padding:6px 11px;background:var(--accent);color:white;border:none;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;white-space:nowrap">💾 Save</button>
+      <button onclick="deleteTask('${t.id}',event)" style="padding:6px 11px;background:var(--red-bg);color:var(--red);border:1px solid #FECACA;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;white-space:nowrap">🗑 Delete</button>
+    </div>
   </div>`;
 
-  const actionsRow = `<div style="display:flex;gap:6px;margin-bottom:6px">
-    <button onclick="saveTaskDetails('${t.id}')" style="padding:4px 10px;background:var(--accent);color:white;border:none;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif">💾 Save</button>
-    <button onclick="deleteTask('${t.id}',event)" style="padding:4px 10px;background:var(--red-bg);color:var(--red);border:1px solid #FECACA;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif">🗑 Delete</button>
-  </div>`;
+  const actionsRow = ``;
 
   const sessData = isDone ? t.sessions : tst.sessions;
   const sessLogBlock = (sessData&&sessData.length)
@@ -1499,7 +1503,7 @@ function expandedHTML(t){
     : '';
 
   const leftCol = `<div style="flex:1.1;min-width:0;padding:10px 12px;border-right:1px solid var(--border)">
-    ${detailsRow}${notesRow}${actionsRow}${sessLogBlock}
+    ${detailsRow}${notesRow}${sessLogBlock}
   </div>`;
 
   // ── 右栏：未完成=计时器，已完成=完成摘要+Marking ──
@@ -1552,31 +1556,33 @@ function expandedHTML(t){
         <span id="tpomo-phase-${t.id}" style="font-size:10px;font-weight:600;padding:2px 8px;border-radius:20px;background:var(--accent-bg);color:var(--accent)">🍅 Focus</span>
         <span id="tpomo-round-${t.id}" style="font-size:10px;color:var(--text-3)">Round 1</span>
       </div>`:''}
-      <div style="display:flex;flex-direction:column;align-items:center;gap:8px">
-        <div class="clock-wrap">
-          <svg viewBox="0 0 84 84"><circle class="c-track" cx="42" cy="42" r="34"/>
-            <circle class="c-prog ${displayState}" id="ring-${t.id}" cx="42" cy="42" r="34" style="stroke-dashoffset:${214-Math.min(tst.elapsed/3600,1)*214}"/></svg>
-          <div class="clock-center">
-            <div class="clock-time" id="clk-${t.id}">${tmode==='countdown'||tmode==='pomodoro'?fmtCountdown(t.id):fmtSecs(tst.elapsed)}</div>
-            <div class="clock-lbl" id="clklbl-${t.id}">${displayState==='running'?(tmode==='pomodoro'?'focus':'timing'):displayState}</div>
-          </div>
-        </div>
-        <div class="timer-controls" style="align-items:center">
-          <div class="timer-status">
+      <div style="display:flex;gap:10px;align-items:flex-start">
+        <div style="flex:1;min-width:0">
+          <div class="timer-status" style="margin-bottom:5px">
             <div class="sdot ${displayState}" id="sdot-${t.id}"></div>
             <span id="stxt-${t.id}">${stLbl(displayState)}</span>
           </div>
-          ${t.estSecs?`<div class="est-compare">Est: <span>${durFmt(t.estSecs)}</span></div>`:''}
-          <div class="btn-row" id="btnrow-${t.id}">${btnRow(t.id,displayState)}</div>
+          ${t.estSecs?`<div class="est-compare" style="margin-bottom:6px">Est: <span>${durFmt(t.estSecs)}</span></div>`:''}
+          <div class="btn-row" id="btnrow-${t.id}" style="margin-bottom:10px">${btnRow(t.id,displayState)}</div>
+          <div style="border-top:1px solid var(--border);padding-top:7px">
+            <div class="quick-lbl" style="font-size:10px;margin-bottom:5px">Or log manually</div>
+            <div class="quick-inputs">
+              <input class="qinput" type="number" id="qh-${t.id}" placeholder="0" min="0" max="9">
+              <span class="qunit">hr</span>
+              <input class="qinput" type="number" id="qm-${t.id}" placeholder="25" min="0" max="59">
+              <span class="qunit">min</span>
+              <button class="tbtn-quick" onclick="quickDone('${t.id}')">✓</button>
+            </div>
+          </div>
         </div>
-        <div style="width:100%;border-top:1px solid var(--border);padding-top:8px">
-          <div class="quick-lbl" style="text-align:center;font-size:10px">Or log manually</div>
-          <div class="quick-inputs" style="justify-content:center">
-            <input class="qinput" type="number" id="qh-${t.id}" placeholder="0" min="0" max="9">
-            <span class="qunit">hr</span>
-            <input class="qinput" type="number" id="qm-${t.id}" placeholder="25" min="0" max="59">
-            <span class="qunit">min</span>
-            <button class="tbtn-quick" onclick="quickDone('${t.id}')">✓</button>
+        <div style="flex-shrink:0">
+          <div class="clock-wrap">
+            <svg viewBox="0 0 84 84"><circle class="c-track" cx="42" cy="42" r="34"/>
+              <circle class="c-prog ${displayState}" id="ring-${t.id}" cx="42" cy="42" r="34" style="stroke-dashoffset:${214-Math.min(tst.elapsed/3600,1)*214}"/></svg>
+            <div class="clock-center">
+              <div class="clock-time" id="clk-${t.id}">${tmode==='countdown'||tmode==='pomodoro'?fmtCountdown(t.id):fmtSecs(tst.elapsed)}</div>
+              <div class="clock-lbl" id="clklbl-${t.id}">${displayState==='running'?(tmode==='pomodoro'?'focus':'timing'):displayState}</div>
+            </div>
           </div>
         </div>
       </div>
@@ -1639,69 +1645,80 @@ function reviewSubHTML(r, prefix){
   const pct=accPct(r.totalQ,r.wrongQ);
   const accColor=pct===null?'var(--text-3)':pct>=90?'var(--green)':pct>=70?'var(--amber)':'var(--red)';
   const rmode=reviewTimerMode[id]||'stopwatch';
-  return `<div class="review-sub" id="rsub-${id}">
-    <div style="margin-bottom:12px;display:flex;gap:10px;align-items:flex-end">
+  // ── 左栏：review details、分数信息、notes、save、delete ──
+  const rvLeftCol = `<div style="flex:1.2;min-width:0;padding:14px 16px;border-right:1px solid var(--border)">
+    <div style="display:flex;gap:8px;align-items:flex-end;margin-bottom:10px">
       <div style="flex:1">
         <div style="font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;color:var(--text-3);margin-bottom:5px">Review Details</div>
-        <input type="text" id="${prefix}-name-${id}" value="${(r.name||'').replace(/"/g,'&quot;')}" style="width:100%;padding:8px 10px;border:1px solid var(--border2);border-radius:8px;font-size:14px;font-family:'DM Sans',sans-serif">
+        <input type="text" id="${prefix}-name-${id}" value="${(r.name||'').replace(/"/g,'&quot;')}" style="width:100%;padding:8px 10px;border:1px solid var(--border2);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif">
       </div>
-      <div style="width:80px">
+      <div style="width:68px">
         <div style="font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;color:var(--text-3);margin-bottom:5px">Points</div>
-        <input type="number" id="${prefix}-points-${id}" value="${r.points||''}" min="0" placeholder="0" style="width:100%;padding:8px 10px;border:1px solid var(--border2);border-radius:8px;font-size:14px;font-family:'DM Mono',monospace">
+        <input type="number" id="${prefix}-points-${id}" value="${r.points||''}" min="0" placeholder="0" style="width:100%;padding:8px 10px;border:1px solid var(--border2);border-radius:8px;font-size:13px;font-family:'DM Mono',monospace">
       </div>
     </div>
     <div class="review-sub-title">
       <span>📌 Review &nbsp;<span style="font-size:11px;font-weight:400;color:${accColor}">${pct!==null?pct+'% accuracy':''}</span></span>
       ${isDone?'<span class="review-done-badge">✓ Complete</span>':''}
     </div>
-    ${totalWrong>0?`<div style="font-size:13px;color:var(--text-3);margin-bottom:6px">Total wrong: <strong style="color:var(--text)">${totalWrong} questions</strong></div>
-    <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px"><div style="flex:1;height:6px;background:var(--border);border-radius:3px;overflow:hidden"><div style="width:${progPct}%;height:100%;background:${progColor};border-radius:3px"></div></div><span style="font-size:12px;font-family:'DM Mono',monospace;color:var(--text-2)">${reviewed}/${totalWrong} done</span></div>`:''}
-    ${!isDone&&totalWrong>0?`<div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap">
-      <span style="font-size:13px;color:var(--text-3)">Reviewed today:</span>
-      <input type="number" id="${prefix}-rcount-${id}" value="${reviewed}" min="0" max="${totalWrong}" style="width:60px;padding:6px 8px;border:1px solid var(--border2);border-radius:6px;font-size:15px;font-family:'DM Mono',monospace;text-align:center" oninput="updateReviewProgress('${id}','${prefix}')">
-      <span style="font-size:13px;color:var(--text-3)">/ ${totalWrong}</span>
+    ${totalWrong>0?`<div style="font-size:12px;color:var(--text-3);margin-bottom:5px">Total wrong: <strong style="color:var(--text)">${totalWrong} questions</strong></div>
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px"><div style="flex:1;height:5px;background:var(--border);border-radius:3px;overflow:hidden"><div style="width:${progPct}%;height:100%;background:${progColor};border-radius:3px"></div></div><span style="font-size:11px;font-family:'DM Mono',monospace;color:var(--text-2)">${reviewed}/${totalWrong} done</span></div>`:''}
+    ${!isDone&&totalWrong>0?`<div style="display:flex;align-items:center;gap:6px;margin-bottom:10px;flex-wrap:wrap">
+      <span style="font-size:12px;color:var(--text-3)">Reviewed today:</span>
+      <input type="number" id="${prefix}-rcount-${id}" value="${reviewed}" min="0" max="${totalWrong}" style="width:54px;padding:5px 7px;border:1px solid var(--border2);border-radius:6px;font-size:14px;font-family:'DM Mono',monospace;text-align:center" oninput="updateReviewProgress('${id}','${prefix}')">
+      <span style="font-size:12px;color:var(--text-3)">/ ${totalWrong}</span>
     </div>`:''}
-    <div style="margin-bottom:12px">
+    <div style="margin-bottom:10px">
       <div style="font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;color:var(--text-3);margin-bottom:5px">Notes / next steps</div>
-      <textarea id="${prefix}-notes-${id}" placeholder="e.g. Done Q1–Q3, next time start from Q4" style="width:100%;height:60px;padding:8px 10px;border:1px solid var(--border2);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;resize:vertical">${r.notes||''}</textarea>
-      <button onclick="saveReviewDetails('${id}','${prefix}')" style="margin-top:6px;padding:7px 14px;background:var(--accent);color:white;border:none;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif">💾 Save changes</button>
+      <textarea id="${prefix}-notes-${id}" placeholder="e.g. Done Q1–Q3, next time start from Q4" style="width:100%;height:54px;padding:7px 9px;border:1px solid var(--border2);border-radius:7px;font-size:12px;font-family:'DM Sans',sans-serif;resize:vertical">${r.notes||''}</textarea>
+      <button onclick="saveReviewDetails('${id}','${prefix}')" style="margin-top:5px;padding:6px 12px;background:var(--accent);color:white;border:none;border-radius:7px;font-size:11px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif">💾 Save changes</button>
     </div>
-    ${!isDone?`
-    <div style="display:flex;gap:6px;background:var(--bg);padding:4px;border-radius:10px;width:fit-content;margin-bottom:12px">
+    ${r.sessions&&r.sessions.length?`<div style="margin-bottom:10px"><div class="sess-log-title" style="margin-bottom:4px">Review session log</div>${r.sessions.map(s=>`<div class="sess-row"><span>${s.a}</span><span>${s.t}</span></div>`).join('')}</div>`:''}
+    <button onclick="deleteReview('${id}',event)" style="padding:6px 12px;background:var(--red-bg);color:var(--red);border:1px solid #FECACA;border-radius:7px;font-size:11px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif">🗑 Delete this review</button>
+  </div>`;
+
+  // ── 右栏：计时器（未完成）或完成摘要 ──
+  const rvRightCol = !isDone ? `<div style="flex:1;min-width:0;padding:14px 12px">
+    <div style="display:flex;gap:5px;background:var(--bg);padding:3px;border-radius:9px;margin-bottom:10px">
       <button class="timer-mode-btn ${rmode==='stopwatch'?'active':''}" onclick="setReviewTimerMode('${id}','stopwatch','${prefix}',this)">↑ Stopwatch</button>
       <button class="timer-mode-btn ${rmode==='countdown'?'active':''}" onclick="setReviewTimerMode('${id}','countdown','${prefix}',this)">↓ Countdown</button>
     </div>
-    ${rmode==='countdown'?`<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
-      <span style="font-size:12px;color:var(--text-3)">Target:</span>
-      <input type="number" id="rv-cd-m-${id}" value="${Math.floor((reviewCountdownTarget[id]||600)/60)}" min="0" max="99" style="width:52px;padding:6px;border:1px solid var(--border2);border-radius:6px;font-size:14px;font-family:'DM Mono',monospace;text-align:center">
-      <span style="font-size:12px;color:var(--text-3)">min</span>
-      <button onclick="setReviewCountdownTarget('${id}')" style="padding:5px 10px;background:var(--accent);color:white;border:none;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif">Set</button>
+    ${rmode==='countdown'?`<div style="display:flex;align-items:center;gap:6px;margin-bottom:8px">
+      <span style="font-size:11px;color:var(--text-3)">Target:</span>
+      <input type="number" id="rv-cd-m-${id}" value="${Math.floor((reviewCountdownTarget[id]||600)/60)}" min="0" max="99" style="width:46px;padding:5px;border:1px solid var(--border2);border-radius:5px;font-size:13px;font-family:'DM Mono',monospace;text-align:center">
+      <span style="font-size:11px;color:var(--text-3)">min</span>
+      <button onclick="setReviewCountdownTarget('${id}')" style="padding:4px 9px;background:var(--accent);color:white;border:none;border-radius:5px;font-size:11px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif">Set</button>
     </div>`:''}
-    <div class="timer-panel" style="padding:14px;flex-wrap:wrap">
-      <div class="clock-wrap">
-        <svg viewBox="0 0 84 84"><circle class="c-track" cx="42" cy="42" r="34"/>
-          <circle class="c-prog ${displayState}" id="rv-ring-${id}" cx="42" cy="42" r="34" style="stroke-dashoffset:${214-Math.min(tst.elapsed/3600,1)*214}"/></svg>
-        <div class="clock-center">
-          <div class="clock-time" id="rv-clk-${id}">${rmode==='countdown'?fmtReviewCountdown(id):fmtSecs(tst.elapsed)}</div>
-          <div class="clock-lbl" id="rv-clklbl-${id}">${displayState==='running'?'focus':displayState}</div>
+    <div style="display:flex;gap:10px;align-items:flex-start">
+      <div style="flex:1;min-width:0">
+        <div class="timer-status" style="margin-bottom:6px"><div class="sdot ${displayState}" id="rv-sdot-${id}"></div><span id="rv-stxt-${id}">${stLbl(displayState)}</span></div>
+        <div class="btn-row" id="rv-btnrow-${id}" style="margin-bottom:10px">${reviewBtnRow(id,displayState)}</div>
+        <div style="border-top:1px solid var(--border);padding-top:7px">
+          <div class="quick-lbl" style="font-size:10px;margin-bottom:5px">Or log manually</div>
+          <div class="quick-inputs">
+            <input class="qinput" type="number" id="rv-qm-${id}" placeholder="10" min="0" max="599">
+            <span class="qunit">min</span>
+            <button class="tbtn-quick" onclick="quickReviewDone('${id}','${prefix}')">Done</button>
+          </div>
         </div>
       </div>
-      <div class="timer-controls">
-        <div class="timer-status"><div class="sdot ${displayState}" id="rv-sdot-${id}"></div><span id="rv-stxt-${id}">${stLbl(displayState)}</span></div>
-        <div class="btn-row" id="rv-btnrow-${id}">${reviewBtnRow(id,displayState)}</div>
-      </div>
-      <div class="qdivider"></div>
-      <div class="quick-area">
-        <div class="quick-lbl">Or log manually</div>
-        <div class="quick-inputs">
-          <input class="qinput" type="number" id="rv-qm-${id}" placeholder="10" min="0" max="599">
-          <span class="qunit">min</span>
-          <button class="tbtn-quick" onclick="quickReviewDone('${id}','${prefix}')">Done</button>
+      <div style="flex-shrink:0">
+        <div class="clock-wrap">
+          <svg viewBox="0 0 84 84"><circle class="c-track" cx="42" cy="42" r="34"/>
+            <circle class="c-prog ${displayState}" id="rv-ring-${id}" cx="42" cy="42" r="34" style="stroke-dashoffset:${214-Math.min(tst.elapsed/3600,1)*214}"/></svg>
+          <div class="clock-center">
+            <div class="clock-time" id="rv-clk-${id}">${rmode==='countdown'?fmtReviewCountdown(id):fmtSecs(tst.elapsed)}</div>
+            <div class="clock-lbl" id="rv-clklbl-${id}">${displayState==='running'?'focus':displayState}</div>
+          </div>
         </div>
       </div>
-    </div>`:`<div style="font-size:13px;color:var(--text-3);margin-bottom:12px">Review time: <strong style="color:var(--text)">${durFmt(r.totalSecs)||'—'}</strong></div>`}
-    ${r.sessions&&r.sessions.length?`<div style="margin-top:8px"><div class="sess-log-title" style="margin-bottom:4px">Review session log</div>${r.sessions.map(s=>`<div class="sess-row"><span>${s.a}</span><span>${s.t}</span></div>`).join('')}</div>`:''}
-    <div style="margin-top:10px"><button onclick="deleteReview('${id}',event)" style="padding:7px 14px;background:var(--red-bg);color:var(--red);border:1px solid #FECACA;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif">🗑 Delete this review</button></div>
+    </div>
+  </div>` : `<div style="flex:1;min-width:0;padding:14px 12px">
+    <div style="font-size:13px;color:var(--text-3)">Review time: <strong style="color:var(--text)">${durFmt(r.totalSecs)||'—'}</strong></div>
+  </div>`;
+
+  return `<div class="review-sub" id="rsub-${id}">
+    <div style="display:flex;align-items:flex-start">${rvLeftCol}${rvRightCol}</div>
   </div>`;
 }
 
