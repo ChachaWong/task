@@ -141,6 +141,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
 .sdot{width:7px;height:7px;border-radius:50%;background:var(--text-3);flex-shrink:0;}
 .sdot.running{background:var(--accent);animation:pulse 1.5s infinite;}
 .sdot.paused{background:var(--amber);}
+.sdot.remote{background:var(--accent);}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.3}}
 .btn-row{display:flex;gap:7px;flex-wrap:wrap;}
 .tbtn{padding:10px 16px;border-radius:var(--radius-sm);font-size:14px;font-weight:600;border:none;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all 0.15s;display:flex;align-items:center;gap:5px;}
@@ -937,9 +938,27 @@ const REVIEW_STATUS_TO_STATE = { 'Not Started':'idle', 'In Progress':'paused', '
 // 用飞书加载回来的真实Review Status初始化本地计时器state，只在本地还没有该review的计时器状态时才初始化，
 // 避免覆盖用户在当前session里正在进行的计时操作。
 function initReviewTSFromStatus(r){
-  if(RVS[r.feishuId]) return; // 已存在本地状态(比如本session正在计时)，不覆盖
-  const state = REVIEW_STATUS_TO_STATE[r.reviewStatus] || 'idle';
-  RVS[r.feishuId] = {state, elapsed:r.totalSecs||0, sessionStart:null, interval:null, sessions:r.sessions||[]};
+  if(RVS[r.feishuId]) return;
+  if(r.reviewStatus === 'In Progress'){
+    const lsKey = 'hw-rv-timing-'+r.feishuId;
+    if(localStorage.getItem(lsKey)){
+      // 这台设备刚在计时然后刷新了 —— 用 localStorage 里存的 elapsed（比飞书更新鲜）
+      const savedElapsed = parseInt(localStorage.getItem('hw-rv-timing-elapsed-'+r.feishuId)) || r.totalSecs || 0;
+      localStorage.removeItem(lsKey);
+      localStorage.removeItem('hw-rv-timing-elapsed-'+r.feishuId);
+      RVS[r.feishuId] = {state:'paused', elapsed:savedElapsed, sessionStart:null, interval:null, sessions:r.sessions||[]};
+      // 页面加载时立刻写飞书（比 beforeunload 的 keepalive 更可靠）
+      r.totalSecs = savedElapsed;
+      feishuUpdateReview(r, 'Paused');
+      feishuLogActionForReview(r, 'Pause');
+    } else {
+      // 另一台设备在计时 —— 只读显示，无操作按钮
+      RVS[r.feishuId] = {state:'remote', elapsed:r.totalSecs||0, sessionStart:null, interval:null, sessions:r.sessions||[]};
+    }
+  } else {
+    const state = REVIEW_STATUS_TO_STATE[r.reviewStatus] || 'idle';
+    RVS[r.feishuId] = {state, elapsed:r.totalSecs||0, sessionStart:null, interval:null, sessions:r.sessions||[]};
+  }
 }
 
 // Task跟Review同样的问题：本地计时器TS对象只存在于内存里，刷新页面后TS是空的，
@@ -948,10 +967,27 @@ function initReviewTSFromStatus(r){
 // 跟Review一样，'In Progress'映射成'paused'(不直接当running)，因为不知道精确的开始时间，没法续算elapsed。
 const TASK_STATUS_TO_STATE = { 'Not Started':'idle', 'In Progress':'paused', 'Paused':'paused', 'Stopped':'stopped', 'Done':'idle' };
 function initTaskTSFromStatus(t){
-  if(TS[t.id]) return; // 已存在本地状态(比如本session正在计时)，不覆盖
-  if(t.status==='done') return; // 已完成的任务不需要初始化计时器状态(taskHTML的isDone分支根本不读tst.state)
-  const state = TASK_STATUS_TO_STATE[t._rawStatus] || 'idle';
-  TS[t.id] = {state, elapsed:t.totalSecs||0, sessionStart:null, interval:null, sessions:t.sessions||[], overtime:0};
+  if(TS[t.id]) return;
+  if(t.status==='done') return;
+  if(t._rawStatus === 'In Progress'){
+    const lsKey = 'hw-timing-'+t.feishuId;
+    if(localStorage.getItem(lsKey)){
+      // 这台设备刚在计时然后刷新了 —— 用 localStorage 里存的 elapsed（比飞书更新鲜）
+      const savedElapsed = parseInt(localStorage.getItem('hw-timing-elapsed-'+t.feishuId)) || t.totalSecs || 0;
+      localStorage.removeItem(lsKey);
+      localStorage.removeItem('hw-timing-elapsed-'+t.feishuId);
+      TS[t.id] = {state:'paused', elapsed:savedElapsed, sessionStart:null, interval:null, sessions:t.sessions||[], overtime:0};
+      // 页面加载时立刻写飞书（比 beforeunload 的 keepalive 更可靠）
+      feishuUpdateStatus(t, 'Paused', savedElapsed);
+      feishuLogAction(t, 'Pause');
+    } else {
+      // 另一台设备在计时 —— 只读显示，无操作按钮
+      TS[t.id] = {state:'remote', elapsed:t.totalSecs||0, sessionStart:null, interval:null, sessions:t.sessions||[], overtime:0};
+    }
+  } else {
+    const state = TASK_STATUS_TO_STATE[t._rawStatus] || 'idle';
+    TS[t.id] = {state, elapsed:t.totalSecs||0, sessionStart:null, interval:null, sessions:t.sessions||[], overtime:0};
+  }
 }
 
 // ── VIEW STATE ──
@@ -1375,12 +1411,12 @@ function taskHTML(t, showNoReviewBtn){
     // 不会卡在一个UI上已经不存在对应入口的状态分支里。
     const st = tst.state==='stopped' ? 'paused' : tst.state;
     if(st==='idle'){
-      // idle状态用大号、蓝色底的Start按钮(跟以前一样的视觉规格)，不是迷你版——这是这次明确要恢复的地方
       right += `<button class="action-btn primary" onclick="tStart('${t.id}',event)">▶ Start</button>`;
+    } else if(st==='remote'){
+      // 另一台设备在计时：只读显示，无操作按钮
+      if(!exp) right += `<span style="font-size:11px;font-weight:600;color:var(--accent)">● In Progress</span>`;
+      if(!exp) right += `<span class="mini-timer-display">${fmtSecs(tst.elapsed)}</span>`;
     } else {
-      // running/paused状态：折叠卡片外面直接显示可操作的迷你按钮+实时跳动的计时数字+简短的状态文字，
-      // 不用点开详情面板才能Pause/Continue。计时数字的id(mini-clk)只在卡片没展开时才渲染——展开时这部分
-      // 计时显示职责交给详情面板里的clk-${id}，避免两个id同时存在于DOM里造成不必要的重复更新。
       const miniStLbl = {running:'● Recording', paused:'⏸ Paused'}[st];
       const miniStColor = {running:'var(--accent)', paused:'var(--amber)'}[st];
       if(!exp) right += `<span id="mini-stlbl-${t.id}" style="font-size:11px;font-weight:600;color:${miniStColor}">${miniStLbl}</span>`;
@@ -1552,38 +1588,31 @@ function expandedHTML(t){
         <span id="tpomo-phase-${t.id}" style="font-size:10px;font-weight:600;padding:2px 8px;border-radius:20px;background:var(--accent-bg);color:var(--accent)">🍅 Focus</span>
         <span id="tpomo-round-${t.id}" style="font-size:10px;color:var(--text-3)">Round 1</span>
       </div>`:''}
-      <div style="display:flex;gap:10px;align-items:flex-start">
-        <div style="flex:1;min-width:0">
-          <div class="timer-status" style="margin-bottom:5px">
+      <div style="display:flex;flex-direction:column;align-items:center;gap:8px">
+        <div class="clock-wrap">
+          <svg viewBox="0 0 84 84"><circle class="c-track" cx="42" cy="42" r="34"/>
+            <circle class="c-prog ${displayState}" id="ring-${t.id}" cx="42" cy="42" r="34" style="stroke-dashoffset:${214-Math.min(tst.elapsed/3600,1)*214}"/></svg>
+          <div class="clock-center">
+            <div class="clock-time" id="clk-${t.id}">${tmode==='countdown'||tmode==='pomodoro'?fmtCountdown(t.id):fmtSecs(tst.elapsed)}</div>
+            <div class="clock-lbl" id="clklbl-${t.id}">${displayState==='running'?(tmode==='pomodoro'?'focus':'timing'):displayState}</div>
+          </div>
+        </div>
+        <div class="timer-controls" style="align-items:center">
+          <div class="timer-status">
             <div class="sdot ${displayState}" id="sdot-${t.id}"></div>
             <span id="stxt-${t.id}">${stLbl(displayState)}</span>
           </div>
-          ${t.estSecs?`<div class="est-compare" style="margin-bottom:6px">Est: <span>${durFmt(t.estSecs)}</span></div>`:''}
-          <div class="btn-row" id="btnrow-${t.id}" style="margin-bottom:10px">${btnRow(t.id,displayState)}</div>
-          <div style="border-top:1px solid var(--border);padding-top:7px">
-            <div class="quick-lbl" style="font-size:10px;margin-bottom:5px">Or log manually</div>
-            <div class="quick-inputs">
-              <input class="qinput" type="number" id="qh-${t.id}" placeholder="0" min="0" max="9">
-              <span class="qunit">hr</span>
-              <input class="qinput" type="number" id="qm-${t.id}" placeholder="25" min="0" max="59">
-              <span class="qunit">min</span>
-              <button class="tbtn-quick" onclick="quickDone('${t.id}')">✓</button>
-            </div>
-          </div>
+          ${t.estSecs?`<div class="est-compare">Est: <span>${durFmt(t.estSecs)}</span></div>`:''}
+          <div class="btn-row" id="btnrow-${t.id}">${btnRow(t.id,displayState)}</div>
         </div>
-        <div style="flex:1;display:flex;justify-content:center">
-          <div style="position:relative;width:120px;height:120px;flex-shrink:0">
-            <svg viewBox="0 0 120 120" style="transform:rotate(-90deg);width:120px;height:120px">
-              <circle fill="none" stroke="var(--border)" stroke-width="7" cx="60" cy="60" r="50"/>
-              <circle fill="none" stroke-width="7" stroke-linecap="round"
-                style="stroke-dasharray:314;stroke-dashoffset:${(314-Math.min(tst.elapsed/3600,1)*314).toFixed(1)};transition:stroke-dashoffset 1s linear,stroke 0.3s"
-                cx="60" cy="60" r="50"
-                class="c-prog ${displayState}" id="ring-${t.id}"/>
-            </svg>
-            <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center">
-              <div style="font-family:'DM Mono',monospace;font-size:20px;font-weight:500;line-height:1" id="clk-${t.id}">${tmode==='countdown'||tmode==='pomodoro'?fmtCountdown(t.id):fmtSecs(tst.elapsed)}</div>
-              <div style="font-size:9px;color:var(--text-3);letter-spacing:0.06em;text-transform:uppercase;margin-top:3px" id="clklbl-${t.id}">${displayState==='running'?(tmode==='pomodoro'?'focus':'timing'):displayState}</div>
-            </div>
+        <div style="width:100%;border-top:1px solid var(--border);padding-top:8px">
+          <div class="quick-lbl" style="text-align:center;font-size:10px">Or log manually</div>
+          <div class="quick-inputs" style="justify-content:center">
+            <input class="qinput" type="number" id="qh-${t.id}" placeholder="0" min="0" max="9">
+            <span class="qunit">hr</span>
+            <input class="qinput" type="number" id="qm-${t.id}" placeholder="25" min="0" max="59">
+            <span class="qunit">min</span>
+            <button class="tbtn-quick" onclick="quickDone('${t.id}')">✓</button>
           </div>
         </div>
       </div>
@@ -2015,6 +2044,7 @@ function confirmReviewDone(){
   r.points=rvPoints;
   const notesEl=document.getElementById('rv2-notes-'+pendingReviewDoneId)||document.getElementById('rv-notes-'+pendingReviewDoneId)||document.getElementById('rvh-notes-'+pendingReviewDoneId);
   if(notesEl) r.notes=notesEl.value||'';
+  if(r.feishuId) localStorage.removeItem('hw-rv-timing-'+r.feishuId);
   feishuUpdateReview(r, 'Done').then(()=>showSyncToast('✓ Review saved to Feishu'));
   playTickSound(true);
   closeModal('reviewDoneModal');
@@ -2156,7 +2186,7 @@ function rvStart(id,e){
   },500);
   rvUpdateCtrl(id,t);
   const r=REVIEWS.find(rv=>rv.feishuId===id);
-  if(r){ feishuUpdateReview(r,'In Progress'); feishuLogActionForReview(r,'Start'); }
+  if(r){ if(r.feishuId) localStorage.setItem('hw-rv-timing-'+r.feishuId,'1'); feishuUpdateReview(r,'In Progress'); feishuLogActionForReview(r,'Start'); }
 }
 function rvPause(id,e){
   if(e) e.stopPropagation();
@@ -2165,7 +2195,7 @@ function rvPause(id,e){
   t.sessions.push({a:'Pause',t:'Today '+new Date().toLocaleTimeString('en-AU',{hour:'2-digit',minute:'2-digit'})});
   rvUpdateCtrl(id,t);
   const r=REVIEWS.find(rv=>rv.feishuId===id);
-  if(r){ feishuLogActionForReview(r,'Pause'); feishuUpdateReview(r,'Paused'); }
+  if(r){ if(r.feishuId) localStorage.removeItem('hw-rv-timing-'+r.feishuId); feishuLogActionForReview(r,'Pause'); feishuUpdateReview(r,'Paused'); }
 }
 function rvContinue(id,e){
   if(e) e.stopPropagation();
@@ -2247,7 +2277,7 @@ function miniBtnRow(id,state,kind){
   if(state==='paused')  return `<button class="tbtn-mini tbtn-continue" onclick="${continueFn}('${id}',event)" title="Continue">▶</button>`;
   return '';
 }
-function stLbl(s){ return {idle:'Ready to start',running:'Recording time…',paused:'Paused'}[s]||s; }
+function stLbl(s){ return {idle:'Ready to start',running:'Recording time…',paused:'Paused',remote:'In Progress on another device'}[s]||s; }
 
 function setTaskTimerMode(id,mode,btn){
   taskTimerMode[id]=mode;
@@ -2289,6 +2319,7 @@ function tStart(id,e){
   // ── 飞书：作业总表 Status → In Progress；计时记录表写一行 Start ──
   const task=TASKS.find(tk=>tk.id===id);
   if(task){
+    if(task.feishuId) localStorage.setItem('hw-timing-'+task.feishuId, '1'); // 标记"这台设备在计时"
     feishuUpdateStatus(task,'In Progress');
     feishuLogAction(task,'Start');
   }
@@ -2315,6 +2346,7 @@ function tPause(id,e){
   // ── 飞书：Status → Paused + 当前专注时间（分钟）；计时记录表写一行 Pause ──
   const task=TASKS.find(tk=>tk.id===id);
   if(task){
+    if(task.feishuId) localStorage.removeItem('hw-timing-'+task.feishuId);
     feishuUpdateStatus(task,'Paused',t.elapsed);
     feishuLogAction(task,'Pause');
   }
@@ -2376,7 +2408,7 @@ function tickUI(id,t){
   if(miniClk){ miniClk.textContent=fmtSecs(t.elapsed); } // 折叠卡片上统一显示正计时秒表(不需要倒计时/番茄钟这些细节，保持简洁)
   if(ring){
     const target=mode==='countdown'?(taskCountdownTarget[id]||1500):mode==='pomodoro'?(taskPomoState[id]?.phase==='focus'?POMO_FOCUS:POMO_BREAK):3600;
-    ring.style.strokeDashoffset=(314-Math.min(t.elapsed/target,1)*314).toFixed(1);
+    ring.style.strokeDashoffset=214-Math.min(t.elapsed/target,1)*214;
     ring.className='c-prog '+(t.overtime>0?'stopped':t.state);
   }
 }
@@ -2502,6 +2534,7 @@ function confirmDone(){
   // 不再自动展开卡片——完成后保持折叠，让用户自己决定要不要点开看详情/批改
 
   // ── 飞书：Status → Finish + 最终专注时间 + Gap(预估-实际,正数=提前完成)；计时记录表写一行 Finish ──
+  if(task.feishuId) localStorage.removeItem('hw-timing-'+task.feishuId);
   feishuUpdateStatus(task,'Done',tst.elapsed).then(()=>showSyncToast('✓ Saved to Feishu'));
   feishuLogAction(task,'Done');
 
@@ -4099,13 +4132,34 @@ async function loadAllDataFromFeishu(){
 // ── INIT ──
 renderContent();
 loadAllDataFromFeishu();
-// 三个弹窗的Subject按钮都从飞书动态读取(对应表的Subject多选字段当前配置的选项)，
-// 这样以后在飞书后台加/删/改学科，页面刷新后就自动跟着变，不需要改代码
 renderSubjectPicker('at-subject-picker','atSubject','tasks');
 renderSubjectPicker('ac-type-picker','acType','classes');
 renderSubjectPicker('ar-subject-picker','arSubject','reviews');
-// 页面打开期间也每分钟轻量检查一次，覆盖"页面一直开着、没有刷新"的场景，避免错过自动完成的时机
 setInterval(autoCompleteOverdueClasses, 60*1000);
+
+// ── 刷新/关闭时：同步把 elapsed 存入 localStorage（同步操作，可靠）。
+// 页面重载后 initTaskTSFromStatus / initReviewTSFromStatus 读取这个值，
+// 用正常 async API 写飞书 Paused + Time Record（比 keepalive fetch 更可靠）。
+window.addEventListener('beforeunload', () => {
+  Object.keys(localStorage).filter(k => k.startsWith('hw-timing-')).forEach(key => {
+    const feishuId = key.replace('hw-timing-', '');
+    const task = TASKS.find(t => t.feishuId === feishuId);
+    if(!task) return;
+    const tst = TS[task.id];
+    if(!tst || tst.state !== 'running' || !tst.sessionStart) return;
+    const elapsed = Math.floor((Date.now() - tst.sessionStart) / 1000);
+    localStorage.setItem('hw-timing-elapsed-' + feishuId, String(elapsed)); // 同步，可靠
+  });
+  Object.keys(localStorage).filter(k => k.startsWith('hw-rv-timing-')).forEach(key => {
+    const feishuId = key.replace('hw-rv-timing-', '');
+    const r = REVIEWS.find(rv => rv.feishuId === feishuId);
+    if(!r) return;
+    const tst = RVS[feishuId];
+    if(!tst || tst.state !== 'running' || !tst.sessionStart) return;
+    const elapsed = (r.totalSecs || 0) + Math.floor((Date.now() - tst.sessionStart) / 1000);
+    localStorage.setItem('hw-rv-timing-elapsed-' + feishuId, String(elapsed)); // 同步，可靠
+  });
+});
 </script>
 </body>
 </html>
