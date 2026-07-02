@@ -935,24 +935,22 @@ function getReviewTS(id){ if(!RVS[id]) RVS[id]={state:'idle',elapsed:0,sessionSt
 // 没法精确续算已用时长，直接当成running会让计时器从elapsed=0重新跳秒，造成时长统计错误。
 // 映射成paused后，按钮会显示"▶ Continue"，用户点击Continue才真正开始计时，语义上更准确也更安全。
 const REVIEW_STATUS_TO_STATE = { 'Not Started':'idle', 'In Progress':'paused', 'Paused':'paused', 'Stopped':'stopped', 'Done':'idle' };
-// 用飞书加载回来的真实Review Status初始化本地计时器state，只在本地还没有该review的计时器状态时才初始化，
-// 避免覆盖用户在当前session里正在进行的计时操作。
 function initReviewTSFromStatus(r){
   if(RVS[r.feishuId]) return;
   if(r.reviewStatus === 'In Progress'){
     const lsKey = 'hw-rv-timing-'+r.feishuId;
     if(localStorage.getItem(lsKey)){
-      // 这台设备刚在计时然后刷新了 —— 用 localStorage 里存的 elapsed（比飞书更新鲜）
+      // 这台设备刚在计时然后刷新 — 用 localStorage 存的 elapsed（比飞书更新鲜）
       const savedElapsed = parseInt(localStorage.getItem('hw-rv-timing-elapsed-'+r.feishuId)) || r.totalSecs || 0;
       localStorage.removeItem(lsKey);
       localStorage.removeItem('hw-rv-timing-elapsed-'+r.feishuId);
       RVS[r.feishuId] = {state:'paused', elapsed:savedElapsed, sessionStart:null, interval:null, sessions:r.sessions||[]};
-      // 页面加载时立刻写飞书（比 beforeunload 的 keepalive 更可靠）
+      // 页面加载时用正常 async API 写飞书（比 beforeunload keepalive 更可靠）
       r.totalSecs = savedElapsed;
       feishuUpdateReview(r, 'Paused');
       feishuLogActionForReview(r, 'Pause');
     } else {
-      // 另一台设备在计时 —— 只读显示，无操作按钮
+      // 另一台设备在计时 — 只读显示，无操作按钮
       RVS[r.feishuId] = {state:'remote', elapsed:r.totalSecs||0, sessionStart:null, interval:null, sessions:r.sessions||[]};
     }
   } else {
@@ -961,10 +959,6 @@ function initReviewTSFromStatus(r){
   }
 }
 
-// Task跟Review同样的问题：本地计时器TS对象只存在于内存里，刷新页面后TS是空的，
-// taskHTML渲染按钮时用的tst.state永远是初始值'idle'，导致不管飞书里Status存的是什么(哪怕是In Progress)，
-// 刷新后一律显示"▶ Start"——这正是"明明在平板上正在计时，电脑刷新却显示Start"的根因。
-// 跟Review一样，'In Progress'映射成'paused'(不直接当running)，因为不知道精确的开始时间，没法续算elapsed。
 const TASK_STATUS_TO_STATE = { 'Not Started':'idle', 'In Progress':'paused', 'Paused':'paused', 'Stopped':'stopped', 'Done':'idle' };
 function initTaskTSFromStatus(t){
   if(TS[t.id]) return;
@@ -972,16 +966,16 @@ function initTaskTSFromStatus(t){
   if(t._rawStatus === 'In Progress'){
     const lsKey = 'hw-timing-'+t.feishuId;
     if(localStorage.getItem(lsKey)){
-      // 这台设备刚在计时然后刷新了 —— 用 localStorage 里存的 elapsed（比飞书更新鲜）
+      // 这台设备刚在计时然后刷新 — 用 localStorage 存的 elapsed（比飞书更新鲜）
       const savedElapsed = parseInt(localStorage.getItem('hw-timing-elapsed-'+t.feishuId)) || t.totalSecs || 0;
       localStorage.removeItem(lsKey);
       localStorage.removeItem('hw-timing-elapsed-'+t.feishuId);
       TS[t.id] = {state:'paused', elapsed:savedElapsed, sessionStart:null, interval:null, sessions:t.sessions||[], overtime:0};
-      // 页面加载时立刻写飞书（比 beforeunload 的 keepalive 更可靠）
+      // 页面加载时用正常 async API 写飞书（比 beforeunload keepalive 更可靠）
       feishuUpdateStatus(t, 'Paused', savedElapsed);
       feishuLogAction(t, 'Pause');
     } else {
-      // 另一台设备在计时 —— 只读显示，无操作按钮
+      // 另一台设备在计时 — 只读显示，无操作按钮
       TS[t.id] = {state:'remote', elapsed:t.totalSecs||0, sessionStart:null, interval:null, sessions:t.sessions||[], overtime:0};
     }
   } else {
@@ -1413,7 +1407,6 @@ function taskHTML(t, showNoReviewBtn){
     if(st==='idle'){
       right += `<button class="action-btn primary" onclick="tStart('${t.id}',event)">▶ Start</button>`;
     } else if(st==='remote'){
-      // 另一台设备在计时：只读显示，无操作按钮
       if(!exp) right += `<span style="font-size:11px;font-weight:600;color:var(--accent)">● In Progress</span>`;
       if(!exp) right += `<span class="mini-timer-display">${fmtSecs(tst.elapsed)}</span>`;
     } else {
@@ -1588,31 +1581,37 @@ function expandedHTML(t){
         <span id="tpomo-phase-${t.id}" style="font-size:10px;font-weight:600;padding:2px 8px;border-radius:20px;background:var(--accent-bg);color:var(--accent)">🍅 Focus</span>
         <span id="tpomo-round-${t.id}" style="font-size:10px;color:var(--text-3)">Round 1</span>
       </div>`:''}
-      <div style="display:flex;flex-direction:column;align-items:center;gap:8px">
-        <div class="clock-wrap">
-          <svg viewBox="0 0 84 84"><circle class="c-track" cx="42" cy="42" r="34"/>
-            <circle class="c-prog ${displayState}" id="ring-${t.id}" cx="42" cy="42" r="34" style="stroke-dashoffset:${214-Math.min(tst.elapsed/3600,1)*214}"/></svg>
-          <div class="clock-center">
-            <div class="clock-time" id="clk-${t.id}">${tmode==='countdown'||tmode==='pomodoro'?fmtCountdown(t.id):fmtSecs(tst.elapsed)}</div>
-            <div class="clock-lbl" id="clklbl-${t.id}">${displayState==='running'?(tmode==='pomodoro'?'focus':'timing'):displayState}</div>
-          </div>
-        </div>
-        <div class="timer-controls" style="align-items:center">
-          <div class="timer-status">
+      <div style="display:flex;gap:10px;align-items:flex-start">
+        <div style="flex:1;min-width:0">
+          <div class="timer-status" style="margin-bottom:5px">
             <div class="sdot ${displayState}" id="sdot-${t.id}"></div>
             <span id="stxt-${t.id}">${stLbl(displayState)}</span>
           </div>
-          ${t.estSecs?`<div class="est-compare">Est: <span>${durFmt(t.estSecs)}</span></div>`:''}
-          <div class="btn-row" id="btnrow-${t.id}">${btnRow(t.id,displayState)}</div>
+          ${t.estSecs?`<div class="est-compare" style="margin-bottom:6px">Est: <span>${durFmt(t.estSecs)}</span></div>`:''}
+          <div class="btn-row" id="btnrow-${t.id}" style="margin-bottom:10px">${btnRow(t.id,displayState)}</div>
+          <div style="border-top:1px solid var(--border);padding-top:7px">
+            <div class="quick-lbl" style="font-size:10px;margin-bottom:5px">Or log manually</div>
+            <div class="quick-inputs">
+              <input class="qinput" type="number" id="qh-${t.id}" placeholder="0" min="0" max="9">
+              <span class="qunit">hr</span>
+              <input class="qinput" type="number" id="qm-${t.id}" placeholder="25" min="0" max="59">
+              <span class="qunit">min</span>
+              <button class="tbtn-quick" onclick="quickDone('${t.id}')">✓</button>
+            </div>
+          </div>
         </div>
-        <div style="width:100%;border-top:1px solid var(--border);padding-top:8px">
-          <div class="quick-lbl" style="text-align:center;font-size:10px">Or log manually</div>
-          <div class="quick-inputs" style="justify-content:center">
-            <input class="qinput" type="number" id="qh-${t.id}" placeholder="0" min="0" max="9">
-            <span class="qunit">hr</span>
-            <input class="qinput" type="number" id="qm-${t.id}" placeholder="25" min="0" max="59">
-            <span class="qunit">min</span>
-            <button class="tbtn-quick" onclick="quickDone('${t.id}')">✓</button>
+        <div style="flex:1;display:flex;justify-content:center;align-items:center">
+          <div style="position:relative;width:120px;height:120px;flex-shrink:0">
+            <svg viewBox="0 0 120 120" style="transform:rotate(-90deg);width:120px;height:120px">
+              <circle fill="none" stroke="var(--border)" stroke-width="7" cx="60" cy="60" r="50"/>
+              <circle fill="none" stroke-width="7" stroke-linecap="round"
+                style="stroke-dasharray:314;stroke-dashoffset:${(314-Math.min(tst.elapsed/3600,1)*314).toFixed(1)};transition:stroke-dashoffset 1s linear,stroke 0.3s"
+                cx="60" cy="60" r="50" class="c-prog ${displayState}" id="ring-${t.id}"/>
+            </svg>
+            <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center">
+              <div style="font-family:'DM Mono',monospace;font-size:20px;font-weight:500;line-height:1" id="clk-${t.id}">${tmode==='countdown'||tmode==='pomodoro'?fmtCountdown(t.id):fmtSecs(tst.elapsed)}</div>
+              <div style="font-size:9px;color:var(--text-3);letter-spacing:0.06em;text-transform:uppercase;margin-top:3px" id="clklbl-${t.id}">${displayState==='running'?(tmode==='pomodoro'?'focus':'timing'):displayState}</div>
+            </div>
           </div>
         </div>
       </div>
@@ -1643,6 +1642,11 @@ function reviewCardHTML(r){
           const tst=getReviewTS(r.feishuId);
           const st = tst.state==='stopped' ? 'paused' : tst.state;
           if(st==='idle') return `<button class="action-btn primary" onclick="rvStart('${r.feishuId}',event)">▶ Start</button>`;
+          if(st==='remote'){
+            let h='';
+            if(!exp){ h+=`<span style="font-size:11px;font-weight:600;color:var(--accent)">● In Progress</span>`; h+=`<span class="mini-timer-display">${fmtSecs(tst.elapsed)}</span>`; }
+            return h;
+          }
           const labels={running:'● Recording', paused:'⏸ Paused'};
           const colors={running:'var(--accent)', paused:'var(--amber)'};
           let html='';
@@ -1669,77 +1673,101 @@ function reviewSubHTML(r, prefix){
   const progColor=progPct===100?'var(--green)':progPct>=50?'var(--amber)':'var(--red)';
   const id=r.feishuId;
   const tst=getReviewTS(id);
-  // stopped是历史遗留状态(以后不会再产生新的)，渲染时统一当作paused处理，跟Task的expandedHTML同样的处理方式
   const displayState = tst.state==='stopped' ? 'paused' : tst.state;
   const isDone=r.done;
   const pct=accPct(r.totalQ,r.wrongQ);
   const accColor=pct===null?'var(--text-3)':pct>=90?'var(--green)':pct>=70?'var(--amber)':'var(--red)';
   const rmode=reviewTimerMode[id]||'stopwatch';
-  return `<div class="review-sub" id="rsub-${id}">
-    <div style="margin-bottom:12px;display:flex;gap:10px;align-items:flex-end">
+  const BIG_CIRC=314;
+  const bigOffset=(BIG_CIRC-Math.min(tst.elapsed/3600,1)*BIG_CIRC).toFixed(1);
+
+  // ── 左栏：详情、统计、notes、save、delete ──
+  const leftCol = `<div style="flex:1.2;min-width:0;padding:12px 14px;border-right:1px solid var(--border)">
+    <div style="display:flex;gap:7px;align-items:flex-end;margin-bottom:8px">
       <div style="flex:1">
-        <div style="font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;color:var(--text-3);margin-bottom:5px">Review Details</div>
-        <input type="text" id="${prefix}-name-${id}" value="${(r.name||'').replace(/"/g,'&quot;')}" style="width:100%;padding:8px 10px;border:1px solid var(--border2);border-radius:8px;font-size:14px;font-family:'DM Sans',sans-serif">
+        <div style="font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;color:var(--text-3);margin-bottom:4px">Review Details</div>
+        <input type="text" id="${prefix}-name-${id}" value="${(r.name||'').replace(/"/g,'&quot;')}" style="width:100%;padding:6px 8px;border:1px solid var(--border2);border-radius:7px;font-size:13px;font-family:'DM Sans',sans-serif">
       </div>
-      <div style="width:80px">
-        <div style="font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;color:var(--text-3);margin-bottom:5px">Points</div>
-        <input type="number" id="${prefix}-points-${id}" value="${r.points||''}" min="0" placeholder="0" style="width:100%;padding:8px 10px;border:1px solid var(--border2);border-radius:8px;font-size:14px;font-family:'DM Mono',monospace">
+      <div style="width:60px;flex-shrink:0">
+        <div style="font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;color:var(--text-3);margin-bottom:4px">Pts</div>
+        <input type="number" id="${prefix}-points-${id}" value="${r.points||''}" min="0" placeholder="0" style="width:100%;padding:6px 8px;border:1px solid var(--border2);border-radius:7px;font-size:12px;font-family:'DM Mono',monospace;text-align:center">
       </div>
     </div>
     <div class="review-sub-title">
       <span>📌 Review &nbsp;<span style="font-size:11px;font-weight:400;color:${accColor}">${pct!==null?pct+'% accuracy':''}</span></span>
       ${isDone?'<span class="review-done-badge">✓ Complete</span>':''}
     </div>
-    ${totalWrong>0?`<div style="font-size:13px;color:var(--text-3);margin-bottom:6px">Total wrong: <strong style="color:var(--text)">${totalWrong} questions</strong></div>
-    <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px"><div style="flex:1;height:6px;background:var(--border);border-radius:3px;overflow:hidden"><div style="width:${progPct}%;height:100%;background:${progColor};border-radius:3px"></div></div><span style="font-size:12px;font-family:'DM Mono',monospace;color:var(--text-2)">${reviewed}/${totalWrong} done</span></div>`:''}
-    ${!isDone&&totalWrong>0?`<div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap">
-      <span style="font-size:13px;color:var(--text-3)">Reviewed today:</span>
-      <input type="number" id="${prefix}-rcount-${id}" value="${reviewed}" min="0" max="${totalWrong}" style="width:60px;padding:6px 8px;border:1px solid var(--border2);border-radius:6px;font-size:15px;font-family:'DM Mono',monospace;text-align:center" oninput="updateReviewProgress('${id}','${prefix}')">
-      <span style="font-size:13px;color:var(--text-3)">/ ${totalWrong}</span>
-    </div>`:''}
-    <div style="margin-bottom:12px">
-      <div style="font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;color:var(--text-3);margin-bottom:5px">Notes / next steps</div>
-      <textarea id="${prefix}-notes-${id}" placeholder="e.g. Done Q1–Q3, next time start from Q4" style="width:100%;height:60px;padding:8px 10px;border:1px solid var(--border2);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;resize:vertical">${r.notes||''}</textarea>
-      <button onclick="saveReviewDetails('${id}','${prefix}')" style="margin-top:6px;padding:7px 14px;background:var(--accent);color:white;border:none;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif">💾 Save changes</button>
+    ${totalWrong>0?`
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+      <div style="flex:1;height:5px;background:var(--border);border-radius:3px;overflow:hidden"><div style="width:${progPct}%;height:100%;background:${progColor};border-radius:3px"></div></div>
+      <span style="font-size:11px;font-family:'DM Mono',monospace;color:var(--text-2);white-space:nowrap">${reviewed}/${totalWrong}</span>
     </div>
-    ${!isDone?`
-    <div style="display:flex;gap:6px;background:var(--bg);padding:4px;border-radius:10px;width:fit-content;margin-bottom:12px">
-      <button class="timer-mode-btn ${rmode==='stopwatch'?'active':''}" onclick="setReviewTimerMode('${id}','stopwatch','${prefix}',this)">↑ Stopwatch</button>
-      <button class="timer-mode-btn ${rmode==='countdown'?'active':''}" onclick="setReviewTimerMode('${id}','countdown','${prefix}',this)">↓ Countdown</button>
-    </div>
-    ${rmode==='countdown'?`<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
-      <span style="font-size:12px;color:var(--text-3)">Target:</span>
-      <input type="number" id="rv-cd-m-${id}" value="${Math.floor((reviewCountdownTarget[id]||600)/60)}" min="0" max="99" style="width:52px;padding:6px;border:1px solid var(--border2);border-radius:6px;font-size:14px;font-family:'DM Mono',monospace;text-align:center">
-      <span style="font-size:12px;color:var(--text-3)">min</span>
-      <button onclick="setReviewCountdownTarget('${id}')" style="padding:5px 10px;background:var(--accent);color:white;border:none;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif">Set</button>
+    <div style="display:flex;gap:14px;align-items:center;margin-bottom:8px">
+      <div><div style="font-size:10px;font-weight:600;letter-spacing:0.05em;text-transform:uppercase;color:var(--text-3)">Total Wrong</div><div style="font-size:14px;font-weight:600;color:var(--text);font-family:'DM Mono',monospace">${totalWrong}</div></div>
+      ${!isDone?`<div><div style="font-size:10px;font-weight:600;letter-spacing:0.05em;text-transform:uppercase;color:var(--text-3)">Reviewed Today</div><div style="display:flex;align-items:center;gap:4px"><input type="number" id="${prefix}-rcount-${id}" value="${reviewed}" min="0" max="${totalWrong}" style="width:52px;padding:4px 6px;border:1px solid var(--border2);border-radius:6px;font-size:14px;font-family:'DM Mono',monospace;text-align:center" oninput="updateReviewProgress('${id}','${prefix}')"><span style="font-size:12px;color:var(--text-3)">/ ${totalWrong}</span></div></div>`:''}
     </div>`:''}
-    <div class="timer-panel" style="padding:14px;flex-wrap:wrap">
-      <div class="clock-wrap">
-        <svg viewBox="0 0 84 84"><circle class="c-track" cx="42" cy="42" r="34"/>
-          <circle class="c-prog ${displayState}" id="rv-ring-${id}" cx="42" cy="42" r="34" style="stroke-dashoffset:${214-Math.min(tst.elapsed/3600,1)*214}"/></svg>
-        <div class="clock-center">
-          <div class="clock-time" id="rv-clk-${id}">${rmode==='countdown'?fmtReviewCountdown(id):fmtSecs(tst.elapsed)}</div>
-          <div class="clock-lbl" id="rv-clklbl-${id}">${displayState==='running'?'focus':displayState}</div>
+    <div style="display:flex;gap:7px;align-items:flex-start;margin-bottom:8px">
+      <div style="flex:1;min-width:0">
+        <div style="font-size:10px;font-weight:600;letter-spacing:0.05em;text-transform:uppercase;color:var(--text-3);margin-bottom:4px">Notes / next steps</div>
+        <textarea id="${prefix}-notes-${id}" placeholder="e.g. Done Q1–Q3, next time start from Q4" rows="3" style="width:100%;padding:5px 7px;border:1px solid var(--border2);border-radius:6px;font-size:11px;font-family:'DM Sans',sans-serif;resize:none">${r.notes||''}</textarea>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:5px;padding-top:17px;flex-shrink:0">
+        <button onclick="saveReviewDetails('${id}','${prefix}')" style="padding:6px 10px;background:var(--accent);color:white;border:none;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;white-space:nowrap">💾 Save</button>
+        <button onclick="deleteReview('${id}',event)" style="padding:6px 10px;background:var(--red-bg);color:var(--red);border:1px solid #FECACA;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;white-space:nowrap">🗑 Delete</button>
+      </div>
+    </div>
+    ${r.sessions&&r.sessions.length?`<div><div class="sess-log-title" style="margin-bottom:4px">Session log</div>${r.sessions.map(s=>`<div class="sess-row"><span>${s.a}</span><span>${s.t}</span></div>`).join('')}</div>`:''}
+  </div>`;
+
+  // ── 右栏：计时器（未完成）或完成摘要 ──
+  const rightCol = !isDone ? `<div style="flex:1;min-width:0;padding:12px 10px">
+    <div style="display:flex;gap:4px;background:var(--bg);padding:3px;border-radius:8px;margin-bottom:8px">
+      <button class="timer-mode-btn ${rmode==='stopwatch'?'active':''}" style="font-size:10px;padding:3px 7px" onclick="setReviewTimerMode('${id}','stopwatch','${prefix}',this)">⬆ Stopwatch</button>
+      <button class="timer-mode-btn ${rmode==='countdown'?'active':''}" style="font-size:10px;padding:3px 7px" onclick="setReviewTimerMode('${id}','countdown','${prefix}',this)">⬇ Countdown</button>
+    </div>
+    ${rmode==='countdown'?`<div style="display:flex;align-items:center;gap:5px;margin-bottom:7px">
+      <span style="font-size:10px;color:var(--text-3)">Target:</span>
+      <input type="number" id="rv-cd-m-${id}" value="${Math.floor((reviewCountdownTarget[id]||600)/60)}" min="0" max="99" style="width:44px;padding:4px;border:1px solid var(--border2);border-radius:5px;font-size:12px;font-family:'DM Mono',monospace;text-align:center">
+      <span style="font-size:10px;color:var(--text-3)">min</span>
+      <button onclick="setReviewCountdownTarget('${id}')" style="padding:3px 8px;background:var(--accent);color:white;border:none;border-radius:5px;font-size:10px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif">Set</button>
+    </div>`:''}
+    <div style="display:flex;gap:10px;align-items:center">
+      <div style="flex:1;min-width:0">
+        <div class="timer-status" style="margin-bottom:6px"><div class="sdot ${displayState}" id="rv-sdot-${id}"></div><span id="rv-stxt-${id}">${stLbl(displayState)}</span></div>
+        <div class="btn-row" id="rv-btnrow-${id}" style="margin-bottom:10px">${reviewBtnRow(id,displayState)}</div>
+        <div style="border-top:1px solid var(--border);padding-top:7px">
+          <div class="quick-lbl" style="font-size:10px;margin-bottom:5px">Or log manually</div>
+          <div class="quick-inputs">
+            <input class="qinput" type="number" id="rv-qm-${id}" placeholder="10" min="0" max="599">
+            <span class="qunit">min</span>
+            <button class="tbtn-quick" onclick="quickReviewDone('${id}','${prefix}')">Done</button>
+          </div>
         </div>
       </div>
-      <div class="timer-controls">
-        <div class="timer-status"><div class="sdot ${displayState}" id="rv-sdot-${id}"></div><span id="rv-stxt-${id}">${stLbl(displayState)}</span></div>
-        <div class="btn-row" id="rv-btnrow-${id}">${reviewBtnRow(id,displayState)}</div>
-      </div>
-      <div class="qdivider"></div>
-      <div class="quick-area">
-        <div class="quick-lbl">Or log manually</div>
-        <div class="quick-inputs">
-          <input class="qinput" type="number" id="rv-qm-${id}" placeholder="10" min="0" max="599">
-          <span class="qunit">min</span>
-          <button class="tbtn-quick" onclick="quickReviewDone('${id}','${prefix}')">Done</button>
+      <div style="flex:1;display:flex;justify-content:center">
+        <div style="position:relative;width:120px;height:120px;flex-shrink:0">
+          <svg viewBox="0 0 120 120" style="transform:rotate(-90deg);width:120px;height:120px">
+            <circle fill="none" stroke="var(--border)" stroke-width="7" cx="60" cy="60" r="50"/>
+            <circle fill="none" stroke-width="7" stroke-linecap="round"
+              style="stroke-dasharray:${BIG_CIRC};stroke-dashoffset:${bigOffset};transition:stroke-dashoffset 1s linear,stroke 0.3s"
+              cx="60" cy="60" r="50" class="c-prog ${displayState}" id="rv-ring-${id}"/>
+          </svg>
+          <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center">
+            <div style="font-family:'DM Mono',monospace;font-size:20px;font-weight:500;line-height:1" id="rv-clk-${id}">${rmode==='countdown'?fmtReviewCountdown(id):fmtSecs(tst.elapsed)}</div>
+            <div style="font-size:9px;color:var(--text-3);letter-spacing:0.06em;text-transform:uppercase;margin-top:3px" id="rv-clklbl-${id}">${displayState==='running'?'focus':displayState}</div>
+          </div>
         </div>
       </div>
-    </div>`:`<div style="font-size:13px;color:var(--text-3);margin-bottom:12px">Review time: <strong style="color:var(--text)">${durFmt(r.totalSecs)||'—'}</strong></div>`}
-    ${r.sessions&&r.sessions.length?`<div style="margin-top:8px"><div class="sess-log-title" style="margin-bottom:4px">Review session log</div>${r.sessions.map(s=>`<div class="sess-row"><span>${s.a}</span><span>${s.t}</span></div>`).join('')}</div>`:''}
-    <div style="margin-top:10px"><button onclick="deleteReview('${id}',event)" style="padding:7px 14px;background:var(--red-bg);color:var(--red);border:1px solid #FECACA;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif">🗑 Delete this review</button></div>
+    </div>
+  </div>` : `<div style="flex:1;min-width:0;padding:12px 10px">
+    <div style="font-size:13px;color:var(--text-3)">Review time: <strong style="color:var(--text)">${durFmt(r.totalSecs)||'—'}</strong></div>
+  </div>`;
+
+  return `<div class="review-sub" id="rsub-${id}">
+    <div style="display:flex;align-items:flex-start">${leftCol}${rightCol}</div>
   </div>`;
 }
+
 
 let rvSubjectFilter = '';
 let rvDateFrom = '', rvDateTo = '', rvDateBasis = 'task';  // rvDateBasis: 'task'=按作业日期筛, 'completed'=按完成日期筛
@@ -1858,6 +1886,11 @@ function reviewPageCardHTML(r){
           const tst=getReviewTS(r.feishuId);
           const st = tst.state==='stopped' ? 'paused' : tst.state;
           if(st==='idle') return `<button class="action-btn primary" onclick="rvStart('${r.feishuId}',event)">▶ Start</button>`;
+          if(st==='remote'){
+            let h='';
+            if(!exp){ h+=`<span style="font-size:11px;font-weight:600;color:var(--accent)">● In Progress</span>`; h+=`<span class="mini-timer-display">${fmtSecs(tst.elapsed)}</span>`; }
+            return h;
+          }
           const labels={running:'● Recording', paused:'⏸ Paused'};
           const colors={running:'var(--accent)', paused:'var(--amber)'};
           let html='';
@@ -2187,6 +2220,7 @@ function rvStart(id,e){
   rvUpdateCtrl(id,t);
   const r=REVIEWS.find(rv=>rv.feishuId===id);
   if(r){ if(r.feishuId) localStorage.setItem('hw-rv-timing-'+r.feishuId,'1'); feishuUpdateReview(r,'In Progress'); feishuLogActionForReview(r,'Start'); }
+  renderContent();
 }
 function rvPause(id,e){
   if(e) e.stopPropagation();
@@ -2244,7 +2278,7 @@ function rvTickUI(id,t){
   const rmode=reviewTimerMode[id]||'stopwatch';
   if(clk) clk.textContent = rmode==='countdown' ? fmtReviewCountdown(id) : fmtSecs(t.elapsed);
   if(miniClk) miniClk.textContent = fmtSecs(t.elapsed); // 折叠卡片统一显示正计时(不需要倒计时细节，保持简洁)
-  if(ring){ ring.style.strokeDashoffset=214-Math.min(t.elapsed/3600,1)*214; ring.className='c-prog '+t.state; }
+  if(ring){ ring.style.strokeDashoffset=(314-Math.min(t.elapsed/3600,1)*314).toFixed(1); ring.className='c-prog '+t.state; }
 }
 function rvUpdateCtrl(id,t){
   const br=document.getElementById('rv-btnrow-'+id);
@@ -2266,18 +2300,17 @@ function btnRow(id,state){
   if(state==='paused')  return `<button class="tbtn tbtn-continue" onclick="tContinue('${id}')">▶ Continue</button>`;
   return '';
 }
-// 折叠卡片外面用的迷你按钮：running只有Pause，paused只有Continue，不再有Stop按钮——
-// "暂停"本身就是可以安全标记完成的状态，不需要再额外一个语义重复的Stop动作。
-// idle状态改用大号的action-btn.primary样式Start按钮，在taskHTML/reviewCardHTML里单独处理，不走这个函数。
-// kind参数区分调用Task还是Review各自的Pause/Continue函数，避免Review的id被错误地传给Task的tPause/tContinue。
 function miniBtnRow(id,state,kind){
   const pauseFn = kind==='review' ? 'rvPause' : 'tPause';
   const continueFn = kind==='review' ? 'rvContinue' : 'tContinue';
   if(state==='running') return `<button class="tbtn-mini tbtn-pause" onclick="${pauseFn}('${id}',event)" title="Pause">⏸</button>`;
   if(state==='paused')  return `<button class="tbtn-mini tbtn-continue" onclick="${continueFn}('${id}',event)" title="Continue">▶</button>`;
-  return '';
+  return ''; // idle / remote — 无迷你按钮
 }
 function stLbl(s){ return {idle:'Ready to start',running:'Recording time…',paused:'Paused',remote:'In Progress on another device'}[s]||s; }
+  return '';
+}
+function stLbl(s){ return {idle:'Ready to start',running:'Recording time…',paused:'Paused'}[s]||s; }
 
 function setTaskTimerMode(id,mode,btn){
   taskTimerMode[id]=mode;
@@ -2319,7 +2352,7 @@ function tStart(id,e){
   // ── 飞书：作业总表 Status → In Progress；计时记录表写一行 Start ──
   const task=TASKS.find(tk=>tk.id===id);
   if(task){
-    if(task.feishuId) localStorage.setItem('hw-timing-'+task.feishuId, '1'); // 标记"这台设备在计时"
+    if(task.feishuId) localStorage.setItem('hw-timing-'+task.feishuId, '1');
     feishuUpdateStatus(task,'In Progress');
     feishuLogAction(task,'Start');
   }
@@ -2408,7 +2441,7 @@ function tickUI(id,t){
   if(miniClk){ miniClk.textContent=fmtSecs(t.elapsed); } // 折叠卡片上统一显示正计时秒表(不需要倒计时/番茄钟这些细节，保持简洁)
   if(ring){
     const target=mode==='countdown'?(taskCountdownTarget[id]||1500):mode==='pomodoro'?(taskPomoState[id]?.phase==='focus'?POMO_FOCUS:POMO_BREAK):3600;
-    ring.style.strokeDashoffset=214-Math.min(t.elapsed/target,1)*214;
+    ring.style.strokeDashoffset=(314-Math.min(t.elapsed/target,1)*314).toFixed(1);
     ring.className='c-prog '+(t.overtime>0?'stopped':t.state);
   }
 }
@@ -4137,27 +4170,24 @@ renderSubjectPicker('ac-type-picker','acType','classes');
 renderSubjectPicker('ar-subject-picker','arSubject','reviews');
 setInterval(autoCompleteOverdueClasses, 60*1000);
 
-// ── 刷新/关闭时：同步把 elapsed 存入 localStorage（同步操作，可靠）。
-// 页面重载后 initTaskTSFromStatus / initReviewTSFromStatus 读取这个值，
-// 用正常 async API 写飞书 Paused + Time Record（比 keepalive fetch 更可靠）。
+// ── 刷新时同步存 elapsed 到 localStorage（同步操作，可靠）
+// 页面重载后 initTaskTSFromStatus / initReviewTSFromStatus 读取这个值，用正常 async API 写飞书
 window.addEventListener('beforeunload', () => {
-  Object.keys(localStorage).filter(k => k.startsWith('hw-timing-')).forEach(key => {
-    const feishuId = key.replace('hw-timing-', '');
-    const task = TASKS.find(t => t.feishuId === feishuId);
+  Object.keys(localStorage).filter(k=>k.startsWith('hw-timing-') && !k.includes('-elapsed-')).forEach(key=>{
+    const feishuId=key.replace('hw-timing-','');
+    const task=TASKS.find(t=>t.feishuId===feishuId);
     if(!task) return;
-    const tst = TS[task.id];
-    if(!tst || tst.state !== 'running' || !tst.sessionStart) return;
-    const elapsed = Math.floor((Date.now() - tst.sessionStart) / 1000);
-    localStorage.setItem('hw-timing-elapsed-' + feishuId, String(elapsed)); // 同步，可靠
+    const tst=TS[task.id];
+    if(!tst||tst.state!=='running'||!tst.sessionStart) return;
+    localStorage.setItem('hw-timing-elapsed-'+feishuId, String(Math.floor((Date.now()-tst.sessionStart)/1000)));
   });
-  Object.keys(localStorage).filter(k => k.startsWith('hw-rv-timing-')).forEach(key => {
-    const feishuId = key.replace('hw-rv-timing-', '');
-    const r = REVIEWS.find(rv => rv.feishuId === feishuId);
+  Object.keys(localStorage).filter(k=>k.startsWith('hw-rv-timing-') && !k.includes('-elapsed-')).forEach(key=>{
+    const feishuId=key.replace('hw-rv-timing-','');
+    const r=REVIEWS.find(rv=>rv.feishuId===feishuId);
     if(!r) return;
-    const tst = RVS[feishuId];
-    if(!tst || tst.state !== 'running' || !tst.sessionStart) return;
-    const elapsed = (r.totalSecs || 0) + Math.floor((Date.now() - tst.sessionStart) / 1000);
-    localStorage.setItem('hw-rv-timing-elapsed-' + feishuId, String(elapsed)); // 同步，可靠
+    const tst=RVS[feishuId];
+    if(!tst||tst.state!=='running'||!tst.sessionStart) return;
+    localStorage.setItem('hw-rv-timing-elapsed-'+feishuId, String((r.totalSecs||0)+Math.floor((Date.now()-tst.sessionStart)/1000)));
   });
 });
 </script>
